@@ -85,16 +85,20 @@ flowchart LR
 
 ---
 
-### 📡 Fase 3: Telemetría Inalámbrica y Análisis de Pista (v0.4.0)
+### 📡 Fase 3: Telemetría Bajo Demanda, Enlace Inalámbrico y Caja Negra (v0.3.0-beta — COMPLETADA)
 
-*Objetivo: Permitir monitoreo y ajuste en vivo mientras el carro está corriendo a alta velocidad en la pista física.*
+*Objetivo: Silencio total en el arranque para evitar sobrecalentamiento y saturación del microcontrolador, enlace transparente Bluetooth HC-05 y grabación automática de carreras.*
 
-- [ ] **Soporte de Enlace Inalámbrico:**
-  - Módulos transceptores NRF24L01+ o ESP-NOW / Bluetooth serial.
-  - Transmisión de telemetría sin cables hacia el receptor USB conectado a la laptop.
-- [ ] **Grabación y Exportación de Telemetría (Black Box):**
-  - Registro de vueltas con exportación a formato `.csv` o `.json`.
-  - Gráfica interactiva de error acumulado y velocidad en función del tiempo para análisis post-carrera.
+- [x] **Protocolo de Telemetría Bajo Demanda (Zero-Print Startup):**
+  - Bandera `telemetry_active = false` en `protocol.h` al encenderse con batería. Cero interrupciones ni prints innecesarios en pista.
+  - Handshake bidireccional `$CMD,STREAM_ON` y `$CMD,STREAM_OFF` automático al conectar y desconectar la suite.
+- [x] **Soporte de Enlace Inalámbrico Bluetooth HC-05:**
+  - Selector de velocidad serial directa (115200 y 9600 baudios) para comunicación inalámbrica transparente sin alterar la circuitería existente.
+- [x] **Módulo Caja Negra (Black Box / Data Logger):**
+  - Auto-grabación reactiva de carreras al detectar transiciones de estado (`STATE_READY` → `STATE_RUNNING` → `STATE_READY`).
+  - Búfer de memoria de las últimas 5 vueltas con cálculo de duración exacta en ms, RMSE ($\pm \text{pts}$), velocidad pico y conteo de frenadas.
+  - Gráfica interactiva de trayectoria en Canvas HTML5 a 60 FPS con superposición comparativa simultánea de Vuelta A y Vuelta B.
+  - Exportación individual o en bloque a formato estándar `.csv` (compatible con Excel, Sheets, Pandas y MATLAB).
 
 ---
 
