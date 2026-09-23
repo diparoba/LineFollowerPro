@@ -1,0 +1,37 @@
+========================================================================
+🏁 LINEFOLLOWER PRO - DESKTOP SUITE (v0.2.0-beta)
+Arquitectura: Nativo Windows x64 (Tauri v2 + Rust + WebView2)
+Tamaño: ~10.2 MB (Reducción del 90.3% frente a v0.1.0-beta)
+========================================================================
+
+DESCRIPCIÓN:
+Suite de control, telemetría y calibración en tiempo real para robots
+seguidores de línea de alta velocidad (16 Sensores Multiplexados y 8 Sensores Directos).
+
+CARACTERÍSTICAS PRINCIPALES:
+1. 100% Autónomo y Portable:
+   - NO requiere tener instalado Node.js, npm, ni .NET Runtime.
+   - Ejecuta directamente sobre Windows 10/11 usando el motor Evergreen WebView2 del sistema.
+
+2. Motor Nativo Ultrarrápido en Rust:
+   - Comunicación serial multihilo a 115200 baudios sin saturación ni bloqueos de UI.
+   - Streaming de telemetría a 60 FPS con sincronización instantánea de eventos.
+   - Verificación atómica de guardado y lectura en memoria EEPROM física del robot.
+
+3. Persistencia Relacional SQLite Local:
+   - Base de datos 'follower.db' generada automáticamente en el directorio de ejecución.
+   - Gestión de flotas de robots (Carro 1, Carro 2, etc.) por categoría (16L Ingeniero Maker / 8L Codex).
+   - Perfiles predeterminados de fábrica para pista rápida, pista técnica y bifurcaciones.
+
+4. Estética "Luxury / Precision Instrument":
+   - Modos Claro y Oscuro con contraste WCAG AAA impecable.
+   - Simulador Hardware-in-the-Loop (HIL): calibración estática leyendo los sensores
+     físicos en tiempo real con los motores apagados para ajuste manual de PD.
+   - Visualizadores analógicos duales con cálculo de centro de masa.
+
+INSTRUCCIONES DE USO:
+1. Conecta tu robot seguidor de línea por USB a la computadora.
+2. Haz doble clic en 'LineFollowerPro.exe'.
+3. Selecciona el puerto COM correspondiente y la categoría de tu robot (16L u 8L).
+4. Haz clic en 'Conectar'. ¡Listo para calibrar y competir!
+========================================================================

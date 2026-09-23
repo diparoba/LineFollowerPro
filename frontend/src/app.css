@@ -1,0 +1,209 @@
+/* ==========================================================================
+   ESTÉTICA LUXURY / PRECISION INSTRUMENT - DESIGN SYSTEM COMPACTO
+   - Radios: 9px (tarjetas), 6px (botones/inputs), 4px (chips/indicadores)
+   - Alto Contraste (WCAG AAA) en Modo Claro y Modo Oscuro
+   - Tipografía híbrida: Outfit (Geometría) + JetBrains Mono (Telemetría)
+   - Densidad de instrumentos optimizada para no requerir scroll
+   ========================================================================== */
+
+:root {
+  --radius-card: 9px;
+  --radius-btn: 6px;
+  --radius-chip: 4px;
+
+  --font-geo: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --accent-amber: #d97706;
+  --accent-emerald: #059669;
+  --accent-rose: #e11d48;
+  --accent-purple: #7c3aed;
+}
+
+/* ---------------- TEMA OSCURO (TITANIO MECANIZADO) ---------------- */
+:root, [data-theme="dark"] {
+  --bg-app: #080a0f;
+  --bg-card: #10131c;
+  --card-gradient: linear-gradient(145deg, #141824, #0b0e16);
+  --bg-input: #090b12;
+  --bg-subtle: #171d2c;
+
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-heading: #ffffff;
+
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-highlight: rgba(0, 242, 254, 0.4);
+  --border-input: #232c3f;
+
+  --accent-cyan: #00f2fe;
+  --accent-blue: #0ea5e9;
+
+  --pill-bg: #141a27;
+  --pill-border: #232c3f;
+  --pill-text: #94a3b8;
+  --pill-active-bg: #0284c7;
+  --pill-active-text: #ffffff;
+  --pill-active-border: #38bdf8;
+
+  --track-bg: #0a0d15;
+  --bar-empty: #1a2233;
+
+  --chip-green-bg: rgba(16, 185, 129, 0.15);
+  --chip-green-text: #34d399;
+  --chip-green-border: rgba(16, 185, 129, 0.4);
+
+  --chip-red-bg: rgba(244, 63, 94, 0.15);
+  --chip-red-text: #f87171;
+  --chip-red-border: rgba(244, 63, 94, 0.4);
+
+  --chip-blue-bg: rgba(14, 165, 233, 0.15);
+  --chip-blue-text: #38bdf8;
+  --chip-blue-border: rgba(14, 165, 233, 0.4);
+
+  --shadow-card: 0 8px 24px -4px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* ------------ TEMA CLARO (ALUMINIO ANODIZADO PLATEADO) ------------ */
+[data-theme="light"] {
+  --bg-app: #edf2f7;
+  --bg-card: #ffffff;
+  --card-gradient: linear-gradient(145deg, #ffffff, #e4eaf3);
+  --bg-input: #ffffff;
+  --bg-subtle: #e2e8f0;
+
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --text-heading: #020617;
+
+  --border-subtle: rgba(0, 0, 0, 0.12);
+  --border-highlight: rgba(2, 132, 199, 0.6);
+  --border-input: #94a3b8;
+
+  --accent-cyan: #0284c7;
+  --accent-blue: #0369a1;
+
+  --pill-bg: #f8fafc;
+  --pill-border: #cbd5e1;
+  --pill-text: #1e293b;
+  --pill-active-bg: #0284c7;
+  --pill-active-text: #ffffff;
+  --pill-active-border: #0369a1;
+
+  --track-bg: #e2e8f0;
+  --bar-empty: #cbd5e1;
+
+  --chip-green-bg: #dcfce7;
+  --chip-green-text: #14532d;
+  --chip-green-border: #16a34a;
+
+  --chip-red-bg: #fee2e2;
+  --chip-red-text: #7f1d1d;
+  --chip-red-border: #dc2626;
+
+  --chip-blue-bg: #e0f2fe;
+  --chip-blue-text: #0369a1;
+  --chip-blue-border: #0284c7;
+
+  --shadow-card: 0 4px 16px -2px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+/* ==========================================================================
+   REGLAS GLOBALES Y RESET COMPACTO
+   ========================================================================== */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-geo);
+  transition: background-color 0.2s ease, color 0.2s ease;
+  font-size: 13.5px;
+  line-height: 1.35;
+}
+
+.precision-card {
+  background: var(--card-gradient);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  position: relative;
+  overflow: hidden;
+}
+
+.precision-btn {
+  font-family: var(--font-geo);
+  font-weight: 600;
+  border-radius: var(--radius-btn);
+  padding: 0.38rem 0.75rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.01em;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.precision-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
+}
+
+.precision-chip {
+  font-family: var(--font-geo);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: var(--radius-chip);
+  padding: 0.2rem 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.precision-mono {
+  font-family: var(--font-mono);
+}
+
+input[type="number"],
+input[type="text"],
+select {
+  font-family: var(--font-mono);
+  border-radius: var(--radius-btn);
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-input);
+  color: var(--text-primary);
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+input[type="number"]:focus,
+input[type="text"]:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25);
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-app);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-input);
+  border-radius: 3px;
+}

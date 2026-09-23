@@ -1,0 +1,60 @@
+# =====================================================================
+# Git Ignore Configuration - LineFollower Pro & Firmware Suite
+# =====================================================================
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.lnk
+
+# Editor & Workspace
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# Node & Frontend Build Artifacts
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Rust & Tauri Build Artifacts
+**/target/
+frontend/src-tauri/target/
+
+# PlatformIO & Embedded Firmware Build Artifacts
+.pio/
+firmware/.pio/
+.pioenvs/
+.piolibdeps/
+.clangd/
+
+# .NET Backend Build Artifacts
+**/bin/
+**/obj/
+backend/bin/
+backend/obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Database temporary / lock files
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Legacy Large Binaries (> 100 MB GitHub limit)
+release_portable_v0.1.0-beta/
+*.pdb
+*.log
+*.tmp
