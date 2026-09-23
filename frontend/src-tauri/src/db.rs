@@ -211,6 +211,34 @@ impl DatabaseService {
             .map_err(|e| format!("Error eliminando perfil: {}", e))?;
         Ok(affected > 0)
     }
+
+    pub fn backup(&self, dest_filename: Option<String>) -> Result<String, String> {
+        let conn = self.conn.lock().map_err(|e| e.to_string())?;
+
+        let exe_dir = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+            .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+
+        let file_name = dest_filename.unwrap_or_else(|| {
+            let secs = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+            format!("backup_follower_{}.db", secs)
+        });
+
+        let dest_path = exe_dir.join(&file_name);
+        if dest_path.exists() {
+            let _ = std::fs::remove_file(&dest_path);
+        }
+
+        let dest_str = dest_path.to_string_lossy().to_string();
+        conn.execute("VACUUM INTO ?1", params![dest_str])
+            .map_err(|e| format!("Error creando backup SQLite: {}", e))?;
+
+        Ok(file_name)
+    }
 }
 
 fn map_profile_row(row: &rusqlite::Row) -> rusqlite::Result<RobotProfile> {

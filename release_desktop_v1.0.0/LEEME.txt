@@ -1,0 +1,54 @@
+========================================================================
+🏁 LINEFOLLOWER PRO - SUITE PORTABLE OFICIAL (v1.0.0 GOLDEN MASTER)
+Arquitectura: Nativo Windows x64 (Tauri v2 + Rust + Svelte + SQLite)
+Tamaño: ~10.8 MB (Zero-Install, 100% Autónomo y Portable para Pendrive USB)
+========================================================================
+
+DESCRIPCIÓN:
+Suite profesional de instrumentación, telemetría, flasheo, caja negra y
+auto-sintonización analítica para robots seguidores de línea de alta competencia
+(16 Canales Multiplexados Ingeniero Maker y 8 Canales Directos Codex).
+
+CARACTERÍSTICAS PRINCIPALES DE LA VERSIÓN 1.0.0:
+1. 100% Portable y Autónomo (Zero-Config):
+   - Diseñado para ejecutarse directamente desde una memoria USB / Flash Drive.
+   - NO requiere instaladores MSI ni derechos de administrador para correr.
+   - Base de datos relacional 'follower.db' ubicada en la misma carpeta del .exe.
+   - Botón de Respaldo Instantáneo (Hot Backup) para clonar la base de datos
+     con marca de tiempo en la misma memoria USB.
+
+2. Instalador de Drivers Offline Integrado:
+   - Incluye el instalador original 'CH341SER.EXE' en la carpeta resources/drivers/.
+   - Instalación directa en un clic con elevación nativa de Windows (UAC / RunAs).
+   - No requiere conexión a Internet ni redirecciones web a páginas externas.
+
+3. Asistente Analítico de Auto-Sintonización PID:
+   - Motor matemático que calcula Kp, Kd, velocidad base, máxima y frenos.
+   - Considera la tensión de alimentación (2S 7.4V/8.4V, 3S 11.1V/12.6V, 5V),
+     distancia sensor-eje (L), ancho de vía (W) y perfil de conducción.
+   - Previsualizador gráfico en Canvas 2D con simulación de respuesta al escalón
+     a 1000 Hz, cálculo de sobreimpulso (%) y tiempo de asentamiento (ms).
+
+4. Flasheador Autónomo con Auto-Fallback de Bootloader:
+   - Flasheo directo de firmwares 16L y 8L con avrdude embebido.
+   - Detección inteligente de Optiboot (115200) y Old Bootloader (57600).
+   - Esquemas gráficos interactivos de pinout y cableado para Arduino Nano.
+
+5. Telemetría Silenciosa Bajo Demanda (Zero-Print al Encender):
+   - Al encenderse en pista con batería, el robot no satura el microcontrolador
+     con impresiones seriales innecesarias.
+   - Activación y desactivación automática ($CMD,STREAM_ON / $CMD,STREAM_OFF)
+     al conectar la suite por USB o enlace Bluetooth HC-05.
+
+6. Caja Negra & Data Logger (Black Box):
+   - Grabación automática de las últimas 5 vueltas al cambiar el estado del robot.
+   - Comparador de vueltas con superposición de trayectoria a 60 FPS y cálculo de RMSE.
+   - Exportación de telemetría a formato CSV para análisis en Excel, MATLAB o Python.
+
+INSTRUCCIONES DE USO:
+1. Conecta tu robot seguidor de línea por USB o Bluetooth a la computadora.
+2. Haz doble clic en 'LineFollowerPro.exe'.
+3. Si es la primera vez en la computadora y no detecta el puerto COM, abre
+   'Hardware & Flasher' y haz clic en 'Instalar Driver CH340'.
+4. Selecciona el puerto COM, presiona 'Conectar' ¡y listo para calibrar y ganar!
+========================================================================

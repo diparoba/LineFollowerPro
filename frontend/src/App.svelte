@@ -9,6 +9,7 @@
   import SimulationModal from './lib/SimulationModal.svelte';
   import HardwareDrawer from './lib/HardwareDrawer.svelte';
   import BlackBoxModal from './lib/BlackBoxModal.svelte';
+  import AutoTuningModal from './lib/AutoTuningModal.svelte';
   import {
     getPorts,
     connectSerial,
@@ -34,10 +35,11 @@
   let newCarInput = '';
   let showNewCarInput = false;
 
-  // Estado de Simulación, Hardware Drawer y Caja Negra
+  // Estado de Simulación, Hardware Drawer, Caja Negra y Auto-Tuning
   let isSimOpen = false;
   let isHardwareOpen = false;
   let isBlackBoxOpen = false;
+  let isAutoTuningOpen = false;
 
   // Estado de Conexión Serial
   let ports = [];
@@ -183,6 +185,22 @@
       statusMessage = 'Parámetros PD actualizados en la RAM del robot con éxito';
     } catch (e) {
       statusMessage = `Error actualizando PID: ${e.message || e}`;
+    }
+  }
+
+  function handleApplyAutoTuning(e) {
+    const gains = e.detail;
+    config = {
+      ...config,
+      kp: gains.kp,
+      kd: gains.kd,
+      baseSpeed: gains.baseSpeed,
+      maxSpeed: gains.maxSpeed,
+      brakeSpeed: gains.brakeSpeed
+    };
+    statusMessage = `Auto-Tuning: Ganancias aplicadas (Kp=${gains.kp}, Kd=${gains.kd}, Base=${gains.baseSpeed})`;
+    if (isConnected) {
+      handleSendPid({ detail: config });
     }
   }
 
@@ -386,7 +404,7 @@
       <div class="brand-text">
         <div class="title-row">
           <h1>LineFollower Pro</h1>
-          <span class="precision-chip version-chip">v0.2.0-beta</span>
+          <span class="precision-chip version-chip">v1.0.0</span>
         </div>
         <p class="subtitle">Arduino Nano (16L & 8L) • Tauri v2 Desktop (Rust) • SQLite Local</p>
       </div>
@@ -440,6 +458,14 @@
 
     <!-- Controles de Modo y Estado -->
     <div class="header-controls">
+      <button 
+        class="autotune-btn precision-btn" 
+        on:click={() => isAutoTuningOpen = true} 
+        title="Abrir Asistente de Auto-Sintonización PID Analítica y Respuesta al Escalón"
+      >
+        🎯 Auto-Tuning
+      </button>
+
       <button 
         class="blackbox-btn precision-btn" 
         on:click={() => isBlackBoxOpen = true} 
@@ -565,6 +591,18 @@
     {isConnected}
     {activeCarName}
     on:close={() => isBlackBoxOpen = false}
+  />
+
+  <!-- Modal de Asistente de Auto-Sintonización PID Analítica -->
+  <AutoTuningModal 
+    bind:isOpen={isAutoTuningOpen}
+    {activeCategory}
+    currentKp={config.kp}
+    currentKd={config.kd}
+    currentBaseSpeed={config.baseSpeed}
+    {isConnected}
+    on:close={() => isAutoTuningOpen = false}
+    on:applyGains={handleApplyAutoTuning}
   />
 </main>
 
@@ -720,6 +758,20 @@
     display: flex;
     align-items: center;
     gap: 0.55rem;
+  }
+
+  .autotune-btn {
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    color: #818cf8;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .autotune-btn:hover {
+    background: rgba(99, 102, 241, 0.25);
+    border-color: #818cf8;
   }
 
   .blackbox-btn {

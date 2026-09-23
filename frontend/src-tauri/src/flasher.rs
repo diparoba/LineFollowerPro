@@ -184,26 +184,42 @@ impl FlasherService {
         (status, full_log)
     }
 
-    pub fn install_driver(driver_type: &str) -> Result<bool, String> {
-        let (_name, url) = match driver_type {
-            "ch340" => (
-                "CH340/CH341 (WCH)",
-                "https://www.wch-ic.com/downloads/CH341SER_EXE.html",
-            ),
-            "cp2102" => (
-                "CP2102/CP2104 (Silicon Labs)",
-                "https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers",
-            ),
-            "ftdi" => (
-                "FT232R (FTDI)",
-                "https://ftdichip.com/drivers/vcp-drivers/",
-            ),
-            _ => return Err(format!("Tipo de driver desconocido: {}", driver_type)),
-        };
-
-        // Abrir la página oficial de descarga o instalador con el navegador del sistema
-        let _ = open_url(url);
-        Ok(true)
+    pub fn install_driver(app: &AppHandle, driver_type: &str) -> Result<bool, String> {
+        match driver_type {
+            "ch340" => {
+                // 1. Priorizar ejecutable local embebido con elevación de Administrador
+                if let Some(driver_path) = Self::resolve_path(app, "drivers/CH341SER.EXE") {
+                    #[cfg(target_os = "windows")]
+                    {
+                        let script = format!("Start-Process -FilePath '{}' -Verb RunAs", driver_path.to_string_lossy());
+                        Command::new("powershell")
+                            .args(["-NoProfile", "-Command", &script])
+                            .spawn()
+                            .map_err(|e| format!("Error ejecutando instalador CH340: {}", e))?;
+                        return Ok(true);
+                    }
+                    #[cfg(not(target_os = "windows"))]
+                    {
+                        return Err("El instalador CH341SER.EXE es exclusivo para Windows.".to_string());
+                    }
+                }
+                // Fallback a página web oficial si no se encontrara el archivo local
+                let url = "https://www.wch-ic.com/downloads/CH341SER_EXE.html";
+                let _ = open_url(url);
+                Ok(true)
+            }
+            "cp2102" => {
+                let url = "https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers";
+                let _ = open_url(url);
+                Ok(true)
+            }
+            "ftdi" => {
+                let url = "https://ftdichip.com/drivers/vcp-drivers/";
+                let _ = open_url(url);
+                Ok(true)
+            }
+            _ => Err(format!("Tipo de driver desconocido: {}", driver_type)),
+        }
     }
 }
 

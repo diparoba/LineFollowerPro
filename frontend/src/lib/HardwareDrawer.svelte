@@ -85,11 +85,16 @@
     }
   }
 
+  let driverStatus = null;
+
   async function handleInstallDriver(driverType) {
     try {
+      driverStatus = { type: 'info', message: 'Iniciando instalador local con permisos de Administrador...' };
       await installDriver(driverType);
+      driverStatus = { type: 'success', message: 'Instalador iniciado en Windows. Sigue los pasos del asistente en pantalla.' };
+      setTimeout(() => { driverStatus = null; }, 5000);
     } catch (e) {
-      alert(`Error abriendo instalador: ${e.toString()}`);
+      driverStatus = { type: 'error', message: `Error ejecutando instalador: ${e.toString()}` };
     }
   }
 
@@ -428,17 +433,23 @@
               instala el controlador correspondiente según el chip que tenga tu tarjeta Arduino Nano:
             </p>
 
+            {#if driverStatus}
+              <div class="status-banner {driverStatus.type}">
+                <span>{driverStatus.message}</span>
+              </div>
+            {/if}
+
             <div class="drivers-grid">
               <!-- CH340 Card -->
-              <div class="driver-card">
+              <div class="driver-card highlight-driver">
                 <div class="driver-icon">🔌</div>
                 <div class="driver-info">
                   <h4>WCH CH340 / CH341</h4>
                   <p>El chip más común en clones económicos de Arduino Nano.</p>
-                  <span class="driver-tag">90% de los casos</span>
+                  <span class="driver-tag">⚡ Offline Embebido (UAC)</span>
                 </div>
-                <button class="btn-driver" on:click={() => handleInstallDriver('ch340')}>
-                  Instalar CH340
+                <button class="btn-driver btn-offline" on:click={() => handleInstallDriver('ch340')}>
+                  Instalar CH340 Directo
                 </button>
               </div>
 

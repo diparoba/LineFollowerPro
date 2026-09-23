@@ -122,13 +122,24 @@ fn flash_firmware(
 }
 
 #[tauri::command]
-fn install_driver(driver_type: String) -> Result<bool, String> {
-    FlasherService::install_driver(&driver_type)
+fn install_driver(app: AppHandle, driver_type: String) -> Result<bool, String> {
+    FlasherService::install_driver(&app, &driver_type)
+}
+
+#[tauri::command]
+fn backup_database(state: State<'_, AppState>, filename: Option<String>) -> Result<String, String> {
+    state.db.backup(filename)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let db_service = DatabaseService::new("follower.db")
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+    let db_path = exe_dir.join("follower.db");
+
+    let db_service = DatabaseService::new(db_path.to_str().unwrap_or("follower.db"))
         .expect("Fallo crítico inicializando SQLite follower.db");
     let serial_service = Arc::new(SerialService::new());
 
@@ -156,6 +167,7 @@ pub fn run() {
             get_profile,
             save_profile,
             delete_profile,
+            backup_database,
             flash_firmware,
             install_driver,
         ])

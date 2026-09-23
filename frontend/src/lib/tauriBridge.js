@@ -177,6 +177,20 @@ export async function deleteProfile(id) {
   }
 }
 
+// Crear copia de respaldo de la base de datos SQLite en la flash USB
+export async function backupDatabase(filename) {
+  if (isTauri()) {
+    try {
+      const savedName = await invoke('backup_database', { filename: filename || null });
+      return { success: true, filename: savedName };
+    } catch (e) {
+      return { success: false, message: e.toString() };
+    }
+  } else {
+    return { success: false, message: 'El respaldo local solo está disponible en modo de escritorio nativo.' };
+  }
+}
+
 // Suscripción a Telemetría en Vivo
 export function subscribeTelemetry(onTelemetry, onLog) {
   if (isTauri()) {

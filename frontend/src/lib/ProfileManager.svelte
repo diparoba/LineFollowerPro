@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
+  import { backupDatabase } from './tauriBridge.js';
 
   export let profiles = [];
   export let activeCategory = 'ALL';
@@ -7,6 +8,7 @@
   const dispatch = createEventDispatcher();
 
   let filterCategory = 'ALL';
+  let backupStatus = '';
 
   $: if (activeCategory && activeCategory !== 'ALL') {
     filterCategory = activeCategory;
@@ -27,6 +29,22 @@
     }
   }
 
+  async function handleBackup() {
+    backupStatus = 'Generando copia de seguridad...';
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const ts = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const filename = `backup_follower_${ts}.db`;
+
+    const res = await backupDatabase(filename);
+    if (res.success) {
+      backupStatus = `✓ Copia creada en flash: ${res.filename}`;
+      setTimeout(() => { backupStatus = ''; }, 6000);
+    } else {
+      backupStatus = `Error: ${res.message || 'Fallo al respaldar'}`;
+    }
+  }
+
   function getForkName(mode) {
     if (mode === 1) return '← Izq';
     if (mode === 2) return 'Der →';
@@ -39,6 +57,13 @@
     <div class="header-left">
       <span class="profile-badge precision-chip">SQLITE DB</span>
       <h3>Perfiles & Flota</h3>
+      <button 
+        class="btn-backup precision-chip" 
+        on:click={handleBackup} 
+        title="Crear un punto de restauración de follower.db en la memoria flash"
+      >
+        💾 Backup DB
+      </button>
     </div>
     <div class="filter-pills">
       <button 
@@ -55,6 +80,12 @@
       >⚡ 8L</button>
     </div>
   </div>
+
+  {#if backupStatus}
+    <div class="backup-banner precision-mono">
+      {backupStatus}
+    </div>
+  {/if}
 
   {#if filteredProfiles.length === 0}
     <div class="empty-state">
@@ -118,6 +149,32 @@
     background: var(--chip-green-bg);
     border: 1px solid var(--chip-green-border);
     color: var(--chip-green-text);
+  }
+
+  .btn-backup {
+    background: rgba(2, 132, 199, 0.15);
+    border: 1px solid rgba(2, 132, 199, 0.4);
+    color: #38bdf8;
+    cursor: pointer;
+    font-size: 0.68rem;
+    font-weight: 700;
+    transition: all 0.15s ease;
+  }
+
+  .btn-backup:hover {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0284c7;
+  }
+
+  .backup-banner {
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    color: #10b981;
+    font-size: 0.72rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    margin-bottom: 0.6rem;
   }
 
   .card-header h3 {

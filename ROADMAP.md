@@ -102,11 +102,23 @@ flowchart LR
 
 ---
 
-### 🏆 Fase 4: Auto-Calibración y Suite de Producción (v1.0.0)
+### 🏆 Fase 4: Suite Portable Definitiva & Auto-Sintonización PID (v1.0.0 — COMPLETADA)
 
-*Objetivo: Versión final estable lista para distribución pública y torneos internacionales.*
+*Objetivo: Versión final de producción lista para competencias y transporte 100% autónomo en memorias USB sin instaladores invasivos.*
 
-- [ ] **Asistente de Auto-Sintonización PID:**
-  - Algoritmo de oscilación controlada (método de relevador) para sugerir valores óptimos de $K_p$ y $K_d$ según la masa del robot y el agarre de las llantas.
-- [ ] **Instalador Oficial MSI / NSIS y Auto-Actualizador:**
-  - Tauri updater con firmas criptográficas para recibir mejoras y nuevos perfiles de pistas automáticamente.
+- [x] **Suite Portable Autónoma (Zero-Config):**
+  - Ejecución directa desde memoria USB / Pendrive sin tocar `Program Files` ni `AppData`.
+  - Persistencia relacional SQLite anclada a la ruta del ejecutable (`follower.db`).
+  - Botón de Respaldo Instantáneo (Hot Backup con `VACUUM INTO`) que crea copias de seguridad fechadas directamente en la unidad flash.
+- [x] **Instalación Offline de Drivers USB:**
+  - Instalador local `CH341SER.EXE` embebido en `resources/drivers/`.
+  - Ejecución directa con elevación de permisos de Administrador de Windows (`RunAs` vía UAC).
+  - Cero dependencias de enlaces web externos ni descargas en boxes de competencia.
+- [x] **Asistente Analítico de Auto-Sintonización PID:**
+  - Motor matemático de modelado físico con compensación por tensión de batería ($V_{\text{in}}$: 2S 7.4V/8.4V, 3S 11.1V/12.6V, 5V).
+  - Ajuste por palanca geométrica ($L$ distancia sensor-eje y $W$ ancho de trocha) y escala de setpoint por categoría (16L vs 8L).
+  - Perfiles de comportamiento seleccionables: Conservador, Equilibrado y Agresivo.
+  - Previsualizador en Canvas 2D con simulación de respuesta al escalón a 1000 Hz, indicación de sobreimpulso (%) y tiempo de asentamiento ($t_s$).
+  - Inyección instantánea de ganancias a los sliders de control y envío directo a la RAM/EEPROM del robot.
+- [x] **Empaquetado Definitivo de Producción (v1.0.0 Golden Master):**
+  - Binario ultra-optimizado `LineFollowerPro.exe` de ~10.8 MB en `release_desktop_v1.0.0`.
