@@ -8,6 +8,11 @@ public:
     int16_t current_right = 0;
 
     void init() {
+#if defined(PIN_STBY)
+        pinMode(PIN_STBY, OUTPUT);
+        digitalWrite(PIN_STBY, HIGH); // Habilita el puente H TB6612FNG
+#endif
+
         pinMode(PIN_PWM_IZQ, OUTPUT);
         pinMode(PIN_IZQ_IN1, OUTPUT);
         pinMode(PIN_IZQ_IN2, OUTPUT);

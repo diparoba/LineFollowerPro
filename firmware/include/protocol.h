@@ -10,12 +10,12 @@ class SerialProtocol {
 private:
     char rx_buffer[80];
     uint8_t rx_idx = 0;
-    bool telemetry_active = false;
+    bool telemetry_active = true; // Activo por defecto para visualización inmediata en monitor serial
 
 public:
     void init() {
         Serial.begin(115200);
-        telemetry_active = false;
+        telemetry_active = true;
     }
 
     bool isTelemetryActive() const { return telemetry_active; }

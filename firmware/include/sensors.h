@@ -23,6 +23,9 @@ public:
                 pinMode(SENSOR_PINS[i], INPUT);
             }
         }
+        // Prescaler 64: Reloj ADC a 250 kHz (16 MHz / 64) -> ~32us por conversión
+        // Bits ADPS2=1, ADPS1=1, ADPS0=0 (0x06). Óptimo para fototransistores sin ghosting.
+        ADCSRA = (ADCSRA & 0xF8) | 0x06;
 #else
         pinMode(PIN_LON, OUTPUT);
         digitalWrite(PIN_LON, HIGH); // Encender LEDs infrarrojos
@@ -32,11 +35,10 @@ public:
         pinMode(PIN_S2, OUTPUT);
         pinMode(PIN_S3, OUTPUT);
         pinMode(PIN_OM, INPUT);
-#endif
 
-        // Acelerar ADC: Prescaler 16 (1 MHz ADC clock -> ~16us por conversion)
-        // Bit2=1, Bit1=0, Bit0=0 en ADCSRA
+        // Acelerar ADC: Prescaler 16 para multiplexor rápido de 16 canales
         ADCSRA = (ADCSRA & 0xF8) | 0x04;
+#endif
 
         // Valores por defecto de calibración preventiva
         for (uint8_t i = 0; i < NUM_SENSORS; i++) {
@@ -47,10 +49,11 @@ public:
     }
 
 #if defined(ROBOT_CODEX_8)
-    // Lectura directa de los 8 sensores analógicos Codex (A0 - A7)
+    // Lectura directa de los 8 sensores analógicos Codex (A0 - A7) sin librerías externas
     void readAll() {
         for (uint8_t i = 0; i < NUM_SENSORS; i++) {
             raw[i] = analogRead(SENSOR_PINS[i]);
+            delayMicroseconds(3); // Breve asentamiento del capacitor S&H del conversor ADC
         }
     }
 #else

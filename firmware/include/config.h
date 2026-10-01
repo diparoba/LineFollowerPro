@@ -1,6 +1,13 @@
 #pragma once
 #include <Arduino.h>
 
+// Si no se define bandera en PlatformIO (ej. al compilar directamente en Arduino IDE),
+// se selecciona por defecto ROBOT_CODEX_8 para asegurar que A0..A5 se configuren como ENTRADAS
+// y evitar colisiones lógicas con los sensores analógicos.
+#if !defined(ROBOT_IM_16) && !defined(ROBOT_CODEX_8)
+#define ROBOT_CODEX_8
+#endif
+
 #if defined(ROBOT_CODEX_8)
 // ==========================================
 // ASIGNACIÓN DE PINES - SENSOR 8 LÍNEAS (CODEX ANALÓGICO DIRECTO)
@@ -17,10 +24,6 @@ static const uint8_t SENSOR_PINS[NUM_SENSORS] = {A0, A1, A2, A3, A4, A5, A6, A7}
 // ==========================================
 // ASIGNACIÓN DE PINES - SENSOR 16 LÍNEAS (INGENIERO MAKER MULTIPLEXADO)
 // ==========================================
-#ifndef ROBOT_IM_16
-#define ROBOT_IM_16
-#endif
-
 #define NUM_SENSORS        16
 #define SENSOR_SETPOINT    7500
 #define SENSOR_MAX_POS     15000
@@ -42,6 +45,9 @@ static const uint8_t SENSOR_PINS[NUM_SENSORS] = {A0, A1, A2, A3, A4, A5, A6, A7}
 // ==========================================
 // ASIGNACIÓN DE PINES - PUENTE H (MOTORES)
 // ==========================================
+// Standby Driver Puente H TB6612FNG (Pin D8 en nueva PCB)
+#define PIN_STBY      8   // D8 (PB0)  - HIGH = Driver Habilitado, LOW = Standby/Apagado
+
 // Motor Derecho (Pines 3, 4, 5)
 #define PIN_PWM_DER   3   // D3 (PD3 - OC2B)
 #define PIN_DER_IN1   4   // D4 (PD4)
