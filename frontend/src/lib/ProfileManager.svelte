@@ -104,8 +104,8 @@
               <span class="profile-name">{p.name}</span>
             </div>
             <div class="profile-meta precision-mono">
-              <span>Kp: <strong>{p.kp.toFixed(4)}</strong></span>
-              <span>Kd: <strong>{p.kd.toFixed(2)}</strong></span>
+              <span>Sens (Kp): <strong>{(Number(p.kp) || 0).toFixed(4)}</strong></span>
+              <span>Corr (Kd): <strong>{(Number(p.kd) || 0).toFixed(4)}</strong></span>
               <span>Base: <strong>{p.baseSpeed}</strong></span>
               <span>Freno: <strong>{p.brakeSpeed}</strong></span>
               <span>Bifurc: <strong>{getForkName(p.forkMode)}</strong></span>
@@ -152,9 +152,9 @@
   }
 
   .btn-backup {
-    background: rgba(2, 132, 199, 0.15);
-    border: 1px solid rgba(2, 132, 199, 0.4);
-    color: #38bdf8;
+    background: var(--chip-blue-bg);
+    border: 1px solid var(--chip-blue-border);
+    color: var(--chip-blue-text);
     cursor: pointer;
     font-size: 0.68rem;
     font-weight: 700;

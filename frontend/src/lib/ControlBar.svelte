@@ -150,10 +150,17 @@
   }
 
   .btn-icon {
-    background: var(--bg-subtle);
+    background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     color: var(--text-secondary);
     padding: 0.35rem 0.5rem;
+    transition: all 0.15s ease;
+  }
+
+  .btn-icon:hover:not(:disabled) {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--border-highlight);
   }
 
   .btn-connect {
@@ -185,13 +192,15 @@
   }
 
   .btn-calib {
-    background: var(--bg-subtle);
+    background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     color: var(--text-primary);
+    transition: all 0.15s ease;
   }
 
   .btn-calib:hover:not(:disabled) {
     border-color: var(--border-highlight);
+    background: var(--bg-hover);
   }
 
   .btn-start {

@@ -23,10 +23,12 @@
 /* ---------------- TEMA OSCURO (TITANIO MECANIZADO) ---------------- */
 :root, [data-theme="dark"] {
   --bg-app: #080a0f;
+  --bg-main: #0a0d15;
   --bg-card: #10131c;
   --card-gradient: linear-gradient(145deg, #141824, #0b0e16);
   --bg-input: #090b12;
   --bg-subtle: #171d2c;
+  --bg-hover: #1e293b;
 
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
@@ -34,6 +36,7 @@
   --text-heading: #ffffff;
 
   --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-medium: rgba(255, 255, 255, 0.15);
   --border-highlight: rgba(0, 242, 254, 0.4);
   --border-input: #232c3f;
 
@@ -46,6 +49,11 @@
   --pill-active-bg: #0284c7;
   --pill-active-text: #ffffff;
   --pill-active-border: #38bdf8;
+
+  --bg-btn-secondary: #1e293b;
+  --border-btn-secondary: #334155;
+  --text-btn-secondary: #f8fafc;
+  --bg-btn-secondary-hover: #334155;
 
   --track-bg: #0a0d15;
   --bar-empty: #1a2233;
@@ -67,20 +75,23 @@
 
 /* ------------ TEMA CLARO (ALUMINIO ANODIZADO PLATEADO) ------------ */
 [data-theme="light"] {
-  --bg-app: #edf2f7;
+  --bg-app: #f1f5f9;
+  --bg-main: #ffffff;
   --bg-card: #ffffff;
-  --card-gradient: linear-gradient(145deg, #ffffff, #e4eaf3);
+  --card-gradient: linear-gradient(145deg, #ffffff, #f8fafc);
   --bg-input: #ffffff;
-  --bg-subtle: #e2e8f0;
+  --bg-subtle: #f8fafc;
+  --bg-hover: #e2e8f0;
 
   --text-primary: #0f172a;
   --text-secondary: #334155;
   --text-muted: #64748b;
   --text-heading: #020617;
 
-  --border-subtle: rgba(0, 0, 0, 0.12);
+  --border-subtle: #e2e8f0;
+  --border-medium: #cbd5e1;
   --border-highlight: rgba(2, 132, 199, 0.6);
-  --border-input: #94a3b8;
+  --border-input: #cbd5e1;
 
   --accent-cyan: #0284c7;
   --accent-blue: #0369a1;
@@ -92,8 +103,13 @@
   --pill-active-text: #ffffff;
   --pill-active-border: #0369a1;
 
-  --track-bg: #e2e8f0;
-  --bar-empty: #cbd5e1;
+  --bg-btn-secondary: #f1f5f9;
+  --border-btn-secondary: #cbd5e1;
+  --text-btn-secondary: #0f172a;
+  --bg-btn-secondary-hover: #e2e8f0;
+
+  --track-bg: #f8fafc;
+  --bar-empty: #e2e8f0;
 
   --chip-green-bg: #dcfce7;
   --chip-green-text: #14532d;

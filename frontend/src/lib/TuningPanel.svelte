@@ -18,6 +18,8 @@
   let profileName = '';
 
   $: setpointVal = activeCategory === 'CODEX_8' ? 3500 : 7500;
+  $: maxKpSlider = Math.max(1.5, Math.ceil((Number(kp) || 0) * 2) / 2 || 1.5);
+  $: maxKdSlider = Math.max(20.0, Math.ceil((Number(kd) || 0) / 5) * 5 || 20.0);
 
   function handleSendPid() {
     dispatch('sendPid', {
@@ -75,27 +77,27 @@
   </div>
 
   <div class="tuning-grid">
-    <!-- Ganancia Proporcional (Kp) -->
+    <!-- Ganancia Proporcional (Kp) - Sensibilidad -->
     <div class="input-group">
       <div class="group-label">
-        <label for="kp">Proporcional (Kp)</label>
-        <span class="val-display precision-mono">{kp.toFixed(4)}</span>
+        <label for="kp">Sensibilidad (Kp)</label>
+        <span class="val-display precision-mono">{(Number(kp) || 0).toFixed(4)}</span>
       </div>
       <div class="slider-row">
-        <input id="kp" type="range" min="0.05" max="1.0" step="0.005" bind:value={kp} />
-        <input type="number" min="0.05" max="1.0" step="0.005" bind:value={kp} class="num-box precision-mono" />
+        <input id="kp" type="range" min="0" max={maxKpSlider} step="0.0001" bind:value={kp} />
+        <input type="number" min="0" step="0.0001" bind:value={kp} class="num-box precision-mono" />
       </div>
     </div>
 
-    <!-- Ganancia Derivativa (Kd) -->
+    <!-- Ganancia Derivativa (Kd) - Corrección -->
     <div class="input-group">
       <div class="group-label">
-        <label for="kd">Derivativo (Kd)</label>
-        <span class="val-display precision-mono">{kd.toFixed(2)}</span>
+        <label for="kd">Corrección (Kd)</label>
+        <span class="val-display precision-mono">{(Number(kd) || 0).toFixed(4)}</span>
       </div>
       <div class="slider-row">
-        <input id="kd" type="range" min="0.5" max="15.0" step="0.1" bind:value={kd} />
-        <input type="number" min="0.5" max="15.0" step="0.1" bind:value={kd} class="num-box precision-mono" />
+        <input id="kd" type="range" min="0" max={maxKdSlider} step="0.0001" bind:value={kd} />
+        <input type="number" min="0" step="0.0001" bind:value={kd} class="num-box precision-mono" />
       </div>
     </div>
 
@@ -374,13 +376,15 @@
 
   .btn-secondary {
     flex: 1;
-    background: #334155;
-    border: 1px solid #475569;
-    color: #ffffff;
+    background: var(--bg-btn-secondary, #1e293b);
+    border: 1px solid var(--border-btn-secondary, #334155);
+    color: var(--text-btn-secondary, #f8fafc);
+    font-weight: 600;
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background: #1e293b;
+    background: var(--bg-btn-secondary-hover, #334155);
+    border-color: var(--border-highlight);
   }
 
   .btn-verify {

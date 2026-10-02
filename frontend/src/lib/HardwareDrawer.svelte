@@ -541,8 +541,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 1.25rem 1.5rem;
-    border-bottom: 1px solid var(--border-subtle, #1e293b);
-    background: var(--bg-card, #0f172a);
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-card);
   }
 
   .header-title {
@@ -559,19 +559,19 @@
     margin: 0;
     font-size: 1.15rem;
     font-weight: 700;
-    color: var(--text-primary, #f8fafc);
+    color: var(--text-heading);
   }
 
   .header-title .subtitle {
     font-size: 0.75rem;
-    color: var(--text-secondary, #94a3b8);
+    color: var(--text-secondary);
   }
 
   .close-btn {
     background: transparent;
     border: none;
     font-size: 1.25rem;
-    color: var(--text-secondary, #94a3b8);
+    color: var(--text-secondary);
     cursor: pointer;
     width: 32px;
     height: 32px;
@@ -583,14 +583,14 @@
   }
 
   .close-btn:hover {
-    background: var(--bg-input, #1e293b);
-    color: var(--text-primary, #ffffff);
+    background: var(--bg-subtle);
+    color: var(--text-primary);
   }
 
   .drawer-tabs {
     display: flex;
-    background: var(--bg-main, #090d16);
-    border-bottom: 1px solid var(--border-subtle, #1e293b);
+    background: var(--bg-subtle);
+    border-bottom: 1px solid var(--border-subtle);
     padding: 0.5rem 1rem 0;
     gap: 0.5rem;
   }
@@ -605,7 +605,7 @@
     background: transparent;
     border: none;
     border-bottom: 2px solid transparent;
-    color: var(--text-secondary, #94a3b8);
+    color: var(--text-secondary);
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
@@ -613,12 +613,12 @@
   }
 
   .tab-btn:hover {
-    color: var(--text-primary, #f8fafc);
+    color: var(--text-primary);
   }
 
   .tab-btn.active {
-    color: var(--accent, #0284c7);
-    border-bottom-color: var(--accent, #0284c7);
+    color: var(--accent-cyan, #0284c7);
+    border-bottom-color: var(--accent-cyan, #0284c7);
   }
 
   .drawer-content {
@@ -634,8 +634,8 @@
   }
 
   .section-card {
-    background: var(--bg-card, #0f172a);
-    border: 1px solid var(--border-subtle, #1e293b);
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
     border-radius: 10px;
     padding: 1rem 1.25rem;
   }
@@ -644,7 +644,7 @@
     margin: 0 0 0.75rem 0;
     font-size: 0.95rem;
     font-weight: 600;
-    color: var(--text-primary, #f8fafc);
+    color: var(--text-heading);
   }
 
   .section-card h4 {
@@ -665,27 +665,27 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem 1rem;
-    background: var(--bg-main, #090d16);
-    border: 1px solid var(--border-subtle, #1e293b);
+    background: var(--track-bg);
+    border: 1px solid var(--border-subtle);
     border-radius: 8px;
     cursor: pointer;
     transition: border-color 0.2s, background 0.2s;
   }
 
   .radio-card.selected {
-    border-color: var(--accent, #0284c7);
+    border-color: var(--accent-cyan, #0284c7);
     background: rgba(2, 132, 199, 0.08);
   }
 
   .radio-content strong {
     display: block;
     font-size: 0.85rem;
-    color: var(--text-primary, #f8fafc);
+    color: var(--text-primary);
   }
 
   .radio-content span {
     font-size: 0.7rem;
-    color: var(--text-secondary, #94a3b8);
+    color: var(--text-secondary);
   }
 
   .form-row {
@@ -698,17 +698,17 @@
     display: block;
     font-size: 0.75rem;
     font-weight: 500;
-    color: var(--text-secondary, #94a3b8);
+    color: var(--text-secondary);
     margin-bottom: 0.25rem;
   }
 
   .select-input {
     width: 100%;
     padding: 0.5rem 0.75rem;
-    background: var(--bg-main, #090d16);
-    border: 1px solid var(--border-subtle, #1e293b);
+    background: var(--bg-input);
+    border: 1px solid var(--border-input);
     border-radius: 7px;
-    color: var(--text-primary, #f8fafc);
+    color: var(--text-primary);
     font-family: inherit;
     font-size: 0.8rem;
   }
@@ -824,24 +824,30 @@
   .pill-btn {
     flex: 1;
     padding: 0.5rem;
-    background: var(--bg-main, #090d16);
-    border: 1px solid var(--border-subtle, #1e293b);
+    background: var(--track-bg);
+    border: 1px solid var(--border-subtle);
     border-radius: 6px;
-    color: var(--text-secondary, #94a3b8);
+    color: var(--text-secondary);
     font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .pill-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--border-highlight);
   }
 
   .pill-btn.active {
-    background: var(--accent, #0284c7);
+    background: var(--pill-active-bg, #0284c7);
     color: #ffffff;
-    border-color: var(--accent, #0284c7);
+    border-color: var(--pill-active-border, #0284c7);
   }
 
   .chip-diagram-card {
-    background: var(--bg-main, #090d16);
-    border: 1px solid var(--border-subtle, #1e293b);
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
     border-radius: 10px;
     padding: 1rem;
   }
@@ -992,8 +998,8 @@
     align-items: center;
     gap: 1rem;
     padding: 0.85rem 1rem;
-    background: var(--bg-main, #090d16);
-    border: 1px solid var(--border-subtle, #1e293b);
+    background: var(--track-bg);
+    border: 1px solid var(--border-subtle);
     border-radius: 8px;
   }
 
@@ -1008,13 +1014,13 @@
   .driver-info h4 {
     margin: 0;
     font-size: 0.85rem;
-    color: var(--text-primary, #f8fafc);
+    color: var(--text-heading);
   }
 
   .driver-info p {
     margin: 0.15rem 0 0.25rem 0;
     font-size: 0.72rem;
-    color: var(--text-secondary, #94a3b8);
+    color: var(--text-secondary);
   }
 
   .driver-tag {
@@ -1045,7 +1051,7 @@
 
   .desc {
     font-size: 0.8rem;
-    color: var(--text-secondary, #94a3b8);
+    color: var(--text-secondary);
     line-height: 1.5;
     margin: 0 0 0.5rem 0;
   }
@@ -1054,18 +1060,18 @@
     margin: 0.5rem 0 0 1.25rem;
     padding: 0;
     font-size: 0.78rem;
-    color: var(--text-secondary, #94a3b8);
+    color: var(--text-secondary);
     line-height: 1.6;
   }
 
   kbd {
-    background: #1e293b;
-    border: 1px solid #334155;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-subtle);
     border-radius: 3px;
     padding: 0.1rem 0.3rem;
     font-family: inherit;
     font-size: 0.7rem;
-    color: #f8fafc;
+    color: var(--text-primary);
   }
 
   .flex-between {
@@ -1085,13 +1091,15 @@
 
   .btn-ghost {
     background: transparent;
-    border: 1px solid var(--border-subtle, #1e293b);
-    color: var(--text-secondary, #94a3b8);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    transition: all 0.15s ease;
   }
 
   .btn-ghost:hover {
-    background: var(--bg-input, #1e293b);
-    color: var(--text-primary, #ffffff);
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+    border-color: var(--border-highlight);
   }
 
   .btn-text {

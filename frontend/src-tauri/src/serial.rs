@@ -132,7 +132,7 @@ impl SerialService {
     }
 
     pub fn send_pid(&self, kp: f32, kd: f32, base: i32, max: i32, brake: i32, fork: i32, color: i32) -> Result<bool, String> {
-        let cmd = format!("$PID,{:.4},{:.3},{},{},{},{},{}", kp, kd, base, max, brake, fork, color);
+        let cmd = format!("$PID,{:.4},{:.4},{},{},{},{},{}", kp, kd, base, max, brake, fork, color);
         self.send_raw(&cmd)
     }
 
@@ -251,4 +251,20 @@ fn parse_telemetry(payload: &str) -> Option<TelemetryData> {
         right_motor,
         state,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_pid_formatting_4_decimals() {
+        let kp = 0.3255f32;
+        let kd = 4.7820f32;
+        let base = 180;
+        let max = 255;
+        let brake = 130;
+        let fork = 0;
+        let color = 0;
+        let cmd = format!("$PID,{:.4},{:.4},{},{},{},{},{}", kp, kd, base, max, brake, fork, color);
+        assert_eq!(cmd, "$PID,0.3255,4.7820,180,255,130,0,0");
+    }
 }

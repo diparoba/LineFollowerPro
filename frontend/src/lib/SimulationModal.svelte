@@ -23,6 +23,9 @@
   let simMaxSpeed = currentMaxSpeed;
   let simBrakeSpeed = currentBrakeSpeed;
 
+  $: maxSimKpSlider = Math.max(1.5, Math.ceil((Number(simKp) || 0) * 2) / 2 || 1.5);
+  $: maxSimKdSlider = Math.max(20.0, Math.ceil((Number(simKd) || 0) / 5) * 5 || 20.0);
+
   $: if (isOpen) {
     simKp = currentKp;
     simKd = currentKd;
@@ -402,18 +405,24 @@
 
             <div class="sim-slider-group">
               <div class="s-label">
-                <label for="simKp">Proporcional (Kp)</label>
-                <span class="precision-mono s-val">{simKp.toFixed(4)}</span>
+                <label for="simKp">Sensibilidad (Kp)</label>
+                <span class="precision-mono s-val">{(Number(simKp) || 0).toFixed(4)}</span>
               </div>
-              <input id="simKp" type="range" min="0.05" max="1.0" step="0.005" bind:value={simKp} />
+              <div class="slider-row">
+                <input id="simKp" type="range" min="0" max={maxSimKpSlider} step="0.0001" bind:value={simKp} />
+                <input type="number" min="0" step="0.0001" bind:value={simKp} class="num-box precision-mono" />
+              </div>
             </div>
 
             <div class="sim-slider-group">
               <div class="s-label">
-                <label for="simKd">Derivativo (Kd)</label>
-                <span class="precision-mono s-val">{simKd.toFixed(2)}</span>
+                <label for="simKd">Corrección (Kd)</label>
+                <span class="precision-mono s-val">{(Number(simKd) || 0).toFixed(4)}</span>
               </div>
-              <input id="simKd" type="range" min="0.5" max="15.0" step="0.1" bind:value={simKd} />
+              <div class="slider-row">
+                <input id="simKd" type="range" min="0" max={maxSimKdSlider} step="0.0001" bind:value={simKd} />
+                <input type="number" min="0" step="0.0001" bind:value={simKd} class="num-box precision-mono" />
+              </div>
             </div>
 
             <div class="sim-slider-group">
@@ -549,7 +558,7 @@
   }
 
   .close-btn {
-    background: var(--bg-subtle);
+    background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     color: var(--text-secondary);
     border-radius: var(--radius-btn);
@@ -560,6 +569,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.15s ease;
+  }
+
+  .close-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--border-highlight);
   }
 
   .source-selector-bar {
@@ -611,6 +627,15 @@
     color: var(--text-secondary);
     padding: 0.3rem 0.6rem;
     font-size: 0.72rem;
+    border-radius: var(--radius-btn);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .reset-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--border-highlight);
   }
 
   .hardware-hint-banner {
@@ -945,10 +970,29 @@
     font-weight: 700;
   }
 
-  input[type="range"] {
-    width: 100%;
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .slider-row input[type="range"] {
+    flex: 1;
     accent-color: var(--accent-cyan);
     height: 5px;
+    cursor: pointer;
+  }
+
+  .num-box {
+    width: 76px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-input);
+    color: var(--text-primary);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.15rem 0.3rem;
+    border-radius: var(--radius-chip);
+    text-align: right;
   }
 
   .btn-apply {

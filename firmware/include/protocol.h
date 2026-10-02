@@ -35,7 +35,7 @@ public:
         // Validar igualdad bit a bit
         bool ok = (verify_magic == EEPROM_MAGIC) &&
                   (abs(verify_cfg.kp - cfg.kp) < 0.0001f) &&
-                  (abs(verify_cfg.kd - cfg.kd) < 0.001f) &&
+                  (abs(verify_cfg.kd - cfg.kd) < 0.0001f) &&
                   (verify_cfg.base_speed == cfg.base_speed) &&
                   (verify_cfg.max_speed == cfg.max_speed) &&
                   (verify_cfg.brake_speed == cfg.brake_speed) &&
@@ -47,7 +47,7 @@ public:
             Serial.print(F("$EEPROM_OK,SAVED,"));
             Serial.print(verify_cfg.kp, 4);
             Serial.print(',');
-            Serial.print(verify_cfg.kd, 3);
+            Serial.print(verify_cfg.kd, 4);
             Serial.print(',');
             Serial.print(verify_cfg.base_speed);
             Serial.print(',');
@@ -82,7 +82,7 @@ public:
             Serial.print(F("$EEPROM_DATA,"));
             Serial.print(stored.kp, 4);
             Serial.print(',');
-            Serial.print(stored.kd, 3);
+            Serial.print(stored.kd, 4);
             Serial.print(',');
             Serial.print(stored.base_speed);
             Serial.print(',');
@@ -132,7 +132,7 @@ public:
         Serial.print(F("$CFG,"));
         Serial.print(cfg.kp, 4);
         Serial.print(',');
-        Serial.print(cfg.kd, 3);
+        Serial.print(cfg.kd, 4);
         Serial.print(',');
         Serial.print(cfg.base_speed);
         Serial.print(',');

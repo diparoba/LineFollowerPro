@@ -254,9 +254,9 @@
           eepromStatus = {
             type: 'success',
             message: '¡Valores de EEPROM cargados en los ajustes PD con éxito!',
-            details: `Kp=${config.kp.toFixed(4)}, Kd=${config.kd.toFixed(2)}, Base=${config.baseSpeed}, Freno=${config.brakeSpeed}`
+            details: `Sensibilidad (Kp)=${config.kp.toFixed(4)}, Corrección (Kd)=${config.kd.toFixed(4)}, Base=${config.baseSpeed}, Freno=${config.brakeSpeed}`
           };
-          statusMessage = `EEPROM sincronizada a controles: Kp=${config.kp}, Kd=${config.kd}, Base=${config.baseSpeed}`;
+          statusMessage = `EEPROM sincronizada a controles: Kp=${config.kp.toFixed(4)}, Kd=${config.kd.toFixed(4)}, Base=${config.baseSpeed}`;
           return;
         }
 
@@ -767,11 +767,23 @@
     padding: 0.35rem 0.65rem;
     font-size: 0.75rem;
     font-weight: 700;
+    transition: all 0.15s ease;
   }
 
   .autotune-btn:hover {
     background: rgba(99, 102, 241, 0.25);
     border-color: #818cf8;
+  }
+
+  :global([data-theme="light"]) .autotune-btn {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+    color: #4f46e5;
+  }
+
+  :global([data-theme="light"]) .autotune-btn:hover {
+    background: #e0e7ff;
+    border-color: #6366f1;
   }
 
   .blackbox-btn {
@@ -781,6 +793,7 @@
     padding: 0.35rem 0.65rem;
     font-size: 0.75rem;
     font-weight: 700;
+    transition: all 0.15s ease;
   }
 
   .blackbox-btn:hover {
@@ -788,30 +801,32 @@
     border-color: #ef4444;
   }
 
-  .hardware-btn {
-    background: var(--track-bg);
+  :global([data-theme="light"]) .blackbox-btn {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #dc2626;
+  }
+
+  :global([data-theme="light"]) .blackbox-btn:hover {
+    background: #fee2e2;
+    border-color: #dc2626;
+  }
+
+  .hardware-btn,
+  .theme-toggle {
+    background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     color: var(--text-primary);
     padding: 0.35rem 0.65rem;
     font-size: 0.75rem;
     font-weight: 600;
+    transition: all 0.15s ease;
   }
 
-  .hardware-btn:hover {
-    border-color: var(--border-highlight);
-    background: var(--bg-hover);
-  }
-
-  .theme-toggle {
-    background: var(--track-bg);
-    border: 1px solid var(--border-subtle);
-    color: var(--text-primary);
-    padding: 0.35rem 0.65rem;
-    font-size: 0.75rem;
-  }
-
+  .hardware-btn:hover,
   .theme-toggle:hover {
     border-color: var(--border-highlight);
+    background: var(--bg-hover);
   }
 
   .system-status {
