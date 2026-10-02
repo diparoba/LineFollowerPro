@@ -1,13 +1,13 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { flashFirmware, installDriver, subscribeFlashLogs, getPorts } from './tauriBridge.js';
+  import { flashFirmware, flashFirmwareEsp32, installDriver, subscribeFlashLogs, getPorts } from './tauriBridge.js';
 
   export let isOpen = false;
   export let onClose = () => {};
   export let currentPort = '';
   export let currentCategory = 'IM_16';
 
-  let activeTab = 'flasher'; // 'flasher' | 'pinout' | 'drivers'
+  let activeTab = 'flasher'; // 'flasher' | 'pinout' | 'drivers' | 'esp32'
   let pinoutModel = currentCategory; // 'IM_16' | 'CODEX_8'
 
   // Flasher state
@@ -21,6 +21,17 @@
   let flashLogs = [];
   let unsubscribeLogs = null;
   let terminalContainer;
+
+  // ESP32 Car state
+  let esp32Port = currentPort || '';
+  let esp32BtName = 'Carro_BT_ESP32';
+  let esp32Baud = 460800;
+  let isFlashingEsp32 = false;
+  let esp32FlashStatus = { type: '', message: '' };
+
+  $: if (currentPort && !esp32Port) {
+    esp32Port = currentPort;
+  }
 
   $: if (currentPort && !selectedPort) {
     selectedPort = currentPort;
@@ -98,6 +109,42 @@
     }
   }
 
+  async function handleFlashEsp32() {
+    const cleanName = esp32BtName.trim();
+    if (!cleanName) {
+      esp32FlashStatus = { type: 'error', message: 'Debes ingresar un nombre para el Bluetooth.' };
+      return;
+    }
+    if (cleanName.length > 31) {
+      esp32FlashStatus = { type: 'error', message: 'El nombre Bluetooth no puede exceder 31 caracteres.' };
+      return;
+    }
+    if (!esp32Port) {
+      esp32FlashStatus = { type: 'error', message: 'Selecciona un puerto COM para el ESP32.' };
+      return;
+    }
+
+    isFlashingEsp32 = true;
+    esp32FlashStatus = { type: 'info', message: 'Iniciando subida de software a ESP32 DevKit V1...' };
+    flashLogs = [
+      `[${new Date().toLocaleTimeString()}] Iniciando flasheo ESP32 Carro BT en ${esp32Port} (Nombre: "${cleanName}")...`
+    ];
+
+    try {
+      const res = await flashFirmwareEsp32(esp32Port, cleanName, esp32Baud);
+      if (res.success) {
+        esp32FlashStatus = { type: 'success', message: res.message };
+      } else {
+        esp32FlashStatus = { type: 'error', message: res.message };
+      }
+    } catch (e) {
+      esp32FlashStatus = { type: 'error', message: e.toString() };
+      flashLogs = [...flashLogs, `[ERROR] ${e.toString()}`];
+    } finally {
+      isFlashingEsp32 = false;
+    }
+  }
+
   function clearLogs() {
     flashLogs = [];
   }
@@ -149,6 +196,13 @@
         on:click={() => activeTab = 'drivers'}
       >
         <span>🛠️</span> Drivers USB
+      </button>
+      <button 
+        class="tab-btn" 
+        class:active={activeTab === 'esp32'} 
+        on:click={() => activeTab = 'esp32'}
+      >
+        <span>🚗</span> Carro BT ESP32
       </button>
     </nav>
 
@@ -490,6 +544,242 @@
               <li>Debe figurar un elemento como <code>USB-SERIAL CH340 (COMx)</code> o <code>Silicon Labs CP210x (COMx)</code> sin ningún icono de advertencia amarillo.</li>
               <li>Regresa a la pestaña <strong>Flasheador</strong> o al selector principal y presiona <strong>🔄 Actualizar Puertos</strong>.</li>
             </ol>
+          </div>
+        </div>
+      {/if}
+
+      {#if activeTab === 'esp32'}
+        <div class="tab-pane">
+          <!-- Overview Card -->
+          <div class="section-card">
+            <div class="card-header-row">
+              <h3>🚗 Carro Robótico Bluetooth Classic</h3>
+              <span class="badge-chip">ESP32 DevKit V1</span>
+            </div>
+            <p class="section-desc">
+              Control inalámbrico para carros RC con puente H <strong>TB6612FNG</strong>. El firmware utiliza <strong>Bluetooth Classic (SPP)</strong> para vincularse directamente con aplicaciones móviles universales sin requerir BLE ni apps especiales.
+            </p>
+          </div>
+
+          <!-- Configuration and Flasher Form -->
+          <div class="section-card">
+            <h4>⚙️ Configuración y Flasheo</h4>
+
+            <!-- Bluetooth Device Name -->
+            <div class="form-group">
+              <label for="bt-name-input">
+                <strong>Nombre del Dispositivo Bluetooth:</strong>
+                <span class="text-hint">(Aparecerá en el escaneo de tu teléfono celular)</span>
+              </label>
+              <div class="input-with-counter">
+                <input
+                  id="bt-name-input"
+                  type="text"
+                  class="text-input"
+                  bind:value={esp32BtName}
+                  maxlength="31"
+                  placeholder="Ej: Carro_BT_01"
+                  disabled={isFlashingEsp32}
+                />
+                <span class="char-counter">{esp32BtName.length}/31</span>
+              </div>
+            </div>
+
+            <!-- Serial Port Selection -->
+            <div class="form-group">
+              <label for="esp32-port-select">
+                <strong>Puerto COM del ESP32:</strong>
+              </label>
+              <div class="port-select-row">
+                <select 
+                  id="esp32-port-select"
+                  class="select-input" 
+                  bind:value={esp32Port} 
+                  disabled={isFlashingEsp32}
+                >
+                  {#if availablePorts.length === 0}
+                    <option value="">No hay puertos COM detectados</option>
+                  {:else}
+                    {#each availablePorts as port}
+                      <option value={port}>{port}</option>
+                    {/each}
+                  {/if}
+                </select>
+                <button 
+                  class="pill-btn" 
+                  on:click={refreshPorts} 
+                  title="Refrescar lista de puertos"
+                  disabled={isFlashingEsp32}
+                >
+                  🔄
+                </button>
+              </div>
+            </div>
+
+            <!-- Baud Rate Selection -->
+            <div class="form-group">
+              <label for="esp32-baud-select">
+                <strong>Velocidad de Flasheo (Baudios):</strong>
+              </label>
+              <select 
+                id="esp32-baud-select"
+                class="select-input" 
+                bind:value={esp32Baud} 
+                disabled={isFlashingEsp32}
+              >
+                <option value={460800}>460800 baudios (Recomendado - Ultra Rápido)</option>
+                <option value={115200}>115200 baudios (Estándar)</option>
+                <option value={921600}>921600 baudios (Máxima velocidad)</option>
+              </select>
+            </div>
+
+            <!-- Flash Action Button -->
+            <button 
+              class="btn-flash" 
+              on:click={handleFlashEsp32} 
+              disabled={isFlashingEsp32 || !esp32Port}
+            >
+              {#if isFlashingEsp32}
+                <span class="spinner-inline">⏳</span> Subiendo a ESP32...
+              {:else}
+                <span>🚀</span> Flashear Carro ESP32
+              {/if}
+            </button>
+
+            <!-- Status Banner -->
+            {#if esp32FlashStatus.message}
+              <div class="status-banner {esp32FlashStatus.type}">
+                <span>{esp32FlashStatus.type === 'success' ? '✅' : esp32FlashStatus.type === 'error' ? '❌' : 'ℹ️'}</span>
+                <div>{esp32FlashStatus.message}</div>
+              </div>
+            {/if}
+
+            <!-- BOOT Hint Alert -->
+            <div class="alert-box">
+              <span class="alert-icon">💡</span>
+              <div class="alert-text">
+                <strong>Consejo para ESP32:</strong> Si la consola muestra <code>Connecting....._____.....</code>, mantén presionado el botón <strong>BOOT</strong> (o IO0) en tu placa ESP32 por 2 segundos hasta que comience el borrado y escritura de la memoria flash.
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Terminal Output -->
+          <div class="section-card terminal-card">
+            <div class="terminal-header">
+              <span>📟 Salida de Flasheo (esptool)</span>
+              <button class="btn-ghost" on:click={clearLogs}>Limpiar</button>
+            </div>
+            <div class="terminal-body" bind:this={terminalContainer}>
+              {#if flashLogs.length === 0}
+                <span class="terminal-placeholder">Esperando inicio de flasheo...</span>
+              {:else}
+                {#each flashLogs as logLine}
+                  <div class="terminal-line">{logLine}</div>
+                {/each}
+              {/if}
+            </div>
+          </div>
+
+          <!-- Wiring Schematic and Pinout Table -->
+          <div class="section-card">
+            <h4>🔌 Conexiones Eléctricas (ESP32 DevKit V1 ⟷ Driver TB6612FNG)</h4>
+            <div class="table-responsive">
+              <table class="pinout-table">
+                <thead>
+                  <tr>
+                    <th>Función</th>
+                    <th>Pin ESP32</th>
+                    <th>Pin Driver</th>
+                    <th>Descripción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="badge-tag pwm">PWMA</span></td>
+                    <td><strong>GPIO 32</strong></td>
+                    <td>PWMA</td>
+                    <td>PWM Motor Izquierdo (LEDC 20 kHz ultrasónico)</td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge-tag dir">Control A1</span></td>
+                    <td><strong>GPIO 25</strong></td>
+                    <td>AIN1</td>
+                    <td>Dirección 1 Motor Izquierdo</td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge-tag dir">Control A2</span></td>
+                    <td><strong>GPIO 33</strong></td>
+                    <td>AIN2</td>
+                    <td>Dirección 2 Motor Izquierdo</td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge-tag pwm">PWMB</span></td>
+                    <td><strong>GPIO 18</strong></td>
+                    <td>PWMB</td>
+                    <td>PWM Motor Derecho (LEDC 20 kHz ultrasónico)</td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge-tag dir">Control B1</span></td>
+                    <td><strong>GPIO 19</strong></td>
+                    <td>BIN1</td>
+                    <td>Dirección 1 Motor Derecho</td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge-tag dir">Control B2</span></td>
+                    <td><strong>GPIO 27</strong></td>
+                    <td>BIN2</td>
+                    <td>Dirección 2 Motor Derecho</td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge-tag stby">STBY</span></td>
+                    <td><strong>GPIO 26</strong></td>
+                    <td>STBY</td>
+                    <td>Habilitador del puente H (Nivel HIGH activo)</td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge-tag pwr">GND</span></td>
+                    <td><strong>GND</strong></td>
+                    <td>GND</td>
+                    <td>Tierra común lógica y de potencia</td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge-tag pwr">VCC</span></td>
+                    <td><strong>VIN / 5V</strong></td>
+                    <td>VCC</td>
+                    <td>Alimentación lógica del driver (5V)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Bluetooth Control Guide & Mobile Apps -->
+          <div class="section-card">
+            <h4>📱 Protocolo Bluetooth Classic y Aplicaciones Móviles</h4>
+            <p class="section-desc">
+              Una vez flasheado, enciende el Bluetooth de tu teléfono y vincula el dispositivo con el nombre asignado (código PIN estándar: <code>1234</code> o sin PIN).
+            </p>
+            <div class="command-grid">
+              <div class="cmd-item"><kbd>F</kbd> <span>Adelante</span></div>
+              <div class="cmd-item"><kbd>B</kbd> <span>Atrás (Reversa)</span></div>
+              <div class="cmd-item"><kbd>L</kbd> <span>Giro Izquierda</span></div>
+              <div class="cmd-item"><kbd>R</kbd> <span>Giro Derecha</span></div>
+              <div class="cmd-item"><kbd>G</kbd> <span>Adelante-Izquierda</span></div>
+              <div class="cmd-item"><kbd>I</kbd> <span>Adelante-Derecha</span></div>
+              <div class="cmd-item"><kbd>H</kbd> <span>Atrás-Izquierda</span></div>
+              <div class="cmd-item"><kbd>J</kbd> <span>Atrás-Derecha</span></div>
+              <div class="cmd-item"><kbd>S</kbd> <span>Detener (Stop)</span></div>
+              <div class="cmd-item"><kbd>0 - 9</kbd> <span>Velocidad (0% a 90%)</span></div>
+              <div class="cmd-item"><kbd>q</kbd> <span>Velocidad Máxima (100%)</span></div>
+            </div>
+            <div class="apps-recommendation">
+              <strong>📲 Apps Recomendadas en Google Play / iOS:</strong>
+              <ul>
+                <li><strong>Arduino Bluetooth RC Car</strong> (por Andi.Co) - Controles por pad virtual, flechas y acelerómetro.</li>
+                <li><strong>Serial Bluetooth Terminal</strong> (por Kai Morich) - Para envío directo de caracteres y depuración.</li>
+                <li><strong>Bluetooth Controller</strong> - Mandos virtuales configurables.</li>
+              </ul>
+            </div>
           </div>
         </div>
       {/if}
@@ -1122,5 +1412,122 @@
 
   @keyframes spin {
     to { transform: rotate(360deg); }
+  }
+
+  /* ESP32 Specific Styles */
+  .card-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .card-header-row h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--text-heading);
+  }
+
+  .badge-chip {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    border-radius: 4px;
+    background: var(--chip-blue-bg, #0284c722);
+    color: var(--chip-blue-text, #0284c7);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .input-with-counter {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .input-with-counter input {
+    width: 100%;
+    padding-right: 3.5rem;
+  }
+
+  .char-counter {
+    position: absolute;
+    right: 0.75rem;
+    font-size: 0.72rem;
+    font-family: monospace;
+    color: var(--text-secondary);
+    pointer-events: none;
+  }
+
+  .badge-tag {
+    display: inline-block;
+    padding: 0.15rem 0.4rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    border-radius: 3px;
+    font-family: monospace;
+  }
+
+  .badge-tag.pwm {
+    background: rgba(14, 165, 233, 0.18);
+    color: #0ea5e9;
+    border: 1px solid rgba(14, 165, 233, 0.3);
+  }
+
+  .badge-tag.dir {
+    background: rgba(168, 85, 247, 0.18);
+    color: #a855f7;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+  }
+
+  .badge-tag.stby {
+    background: rgba(34, 197, 94, 0.18);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+  }
+
+  .badge-tag.pwr {
+    background: rgba(234, 179, 8, 0.18);
+    color: #eab308;
+    border: 1px solid rgba(234, 179, 8, 0.3);
+  }
+
+  .command-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 0.5rem;
+    margin: 0.75rem 0;
+  }
+
+  .cmd-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-subtle);
+    padding: 0.35rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    color: var(--text-primary);
+  }
+
+  .apps-recommendation {
+    margin-top: 0.75rem;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    padding: 0.75rem;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+  }
+
+  .apps-recommendation ul {
+    margin: 0.4rem 0 0 1.25rem;
+    padding: 0;
+    line-height: 1.5;
+  }
+
+  .apps-recommendation li {
+    margin-bottom: 0.25rem;
   }
 </style>

@@ -261,6 +261,18 @@ export async function flashFirmware(port, robotType, baudRate = 115200, autoFall
   }
 }
 
+export async function flashFirmwareEsp32(port, btName, baudRate = 460800) {
+  if (isTauri()) {
+    return await invoke('flash_firmware_esp32', {
+      port,
+      btName,
+      baudRate: Number(baudRate)
+    });
+  } else {
+    throw new Error('El flasheo de firmware ESP32 solo está disponible en la versión de escritorio nativa.');
+  }
+}
+
 export async function installDriver(driverType) {
   if (isTauri()) {
     return await invoke('install_driver', { driverType });
