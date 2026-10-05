@@ -1,5 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
+  import Sidebar from './lib/Sidebar.svelte';
   import SensorVisualizer from './lib/SensorVisualizer.svelte';
   import SensorVisualizer8 from './lib/SensorVisualizer8.svelte';
   import MotorVisualizer from './lib/MotorVisualizer.svelte';
@@ -396,271 +397,244 @@
   });
 </script>
 
-<main class="dashboard-layout">
-  <!-- Barra Superior Compacta -->
-  <header class="app-header precision-card">
-    <div class="brand">
-      <div class="logo-icon">🏎️</div>
-      <div class="brand-text">
-        <div class="title-row">
-          <h1>LineFollower Pro</h1>
-          <span class="precision-chip version-chip">v1.0.0</span>
-        </div>
-        <p class="subtitle">Arduino Nano (16L & 8L) • Tauri v2 Desktop (Rust) • SQLite Local</p>
-      </div>
-    </div>
-
-    <!-- Pestañas de Categoría -->
-    <div class="category-tabs">
-      <button 
-        class="category-tab {activeCategory === 'IM_16' ? 'active' : ''}" 
-        on:click={() => handleCategoryChange('IM_16')}
-      >
-        <span class="tab-icon">🏎️</span>
-        <span class="tab-label">16L Ingeniero Maker</span>
-      </button>
-
-      <button 
-        class="category-tab {activeCategory === 'CODEX_8' ? 'active' : ''}" 
-        on:click={() => handleCategoryChange('CODEX_8')}
-      >
-        <span class="tab-icon">⚡</span>
-        <span class="tab-label">8L Codex Direct</span>
-      </button>
-    </div>
-
-    <!-- Selector de Carro -->
-    <div class="fleet-selector-wrap">
-      <label for="carSelect" class="fleet-label">Carro:</label>
-      <select id="carSelect" bind:value={activeCarName} class="car-select precision-mono">
-        {#each carFleet as car}
-          <option value={car}>{car}</option>
-        {/each}
-      </select>
-      
-      {#if !showNewCarInput}
-        <button class="precision-btn btn-add-car" on:click={() => showNewCarInput = true} title="Añadir nuevo carro">
-          +
-        </button>
-      {:else}
-        <div class="new-car-modal-inline">
-          <input 
-            type="text" 
-            placeholder="Nombre..." 
-            bind:value={newCarInput} 
-            class="new-car-input precision-mono" 
-          />
-          <button class="precision-btn btn-confirm-car" on:click={handleAddCar}>✓</button>
-          <button class="precision-btn btn-cancel-car" on:click={() => showNewCarInput = false}>✕</button>
-        </div>
-      {/if}
-    </div>
-
-    <!-- Controles de Modo y Estado -->
-    <div class="header-controls">
-      <button 
-        class="autotune-btn precision-btn" 
-        on:click={() => isAutoTuningOpen = true} 
-        title="Abrir Asistente de Auto-Sintonización PID Analítica y Respuesta al Escalón"
-      >
-        🎯 Auto-Tuning
-      </button>
-
-      <button 
-        class="blackbox-btn precision-btn" 
-        on:click={() => isBlackBoxOpen = true} 
-        title="Abrir Caja Negra, Historial de 5 Vueltas, Comparador RMSE y Exportación CSV"
-      >
-        🔴 Caja Negra
-      </button>
-
-      <button 
-        class="hardware-btn precision-btn" 
-        on:click={() => isHardwareOpen = true} 
-        title="Abrir Flasheador de Firmware, Esquema de Pines y Drivers"
-      >
-        🛠️ Hardware & Flasher
-      </button>
-
-      <button class="theme-toggle precision-btn" on:click={toggleTheme} title="Alternar Modo Oscuro / Modo Claro">
-        {theme === 'dark' ? '☀️ Claro' : '🌙 Oscuro'}
-      </button>
-
-      <div class="system-status precision-chip {isConnected ? 'status-online' : 'status-offline'}">
-        <span class="live-dot {isConnected ? 'active' : ''}"></span>
-        <span>{isConnected ? 'ONLINE' : 'DESCONECTADO'}</span>
-      </div>
-    </div>
-  </header>
-
-  <!-- Barra de Control -->
-  <ControlBar 
-    {ports} 
-    {selectedPort} 
-    {isConnected} 
-    {statusMessage}
-    on:connect={handleConnect}
-    on:disconnect={handleDisconnect}
-    on:refreshPorts={fetchPorts}
-    on:command={handleCommand}
-    on:openSim={() => isSimOpen = true}
-  />
-
-  <!-- Grid Principal Compacto -->
-  <div class="content-grid">
-    <!-- Columna Izquierda: Sensores y Tracción -->
-    <div class="left-column">
-      {#if activeCategory === 'CODEX_8'}
-        <SensorVisualizer8 
-          raw={telemetry.raw} 
-          position={telemetry.position} 
-          error={telemetry.error} 
-          state={telemetry.state} 
-        />
-      {:else}
-        <SensorVisualizer 
-          raw={telemetry.raw} 
-          position={telemetry.position} 
-          error={telemetry.error} 
-          state={telemetry.state} 
-        />
-      {/if}
-
-      <MotorVisualizer 
-        leftMotor={telemetry.leftMotor} 
-        rightMotor={telemetry.rightMotor} 
-      />
-    </div>
-
-    <!-- Columna Derecha: Sintonía y Perfiles -->
-    <div class="right-column">
-      <TuningPanel 
-        kp={config.kp} 
-        kd={config.kd} 
-        baseSpeed={config.baseSpeed} 
-        maxSpeed={config.maxSpeed} 
-        brakeSpeed={config.brakeSpeed} 
-        forkMode={config.forkMode} 
-        lineColor={config.lineColor} 
-        {isConnected}
-        {eepromStatus}
-        {activeCarName}
-        {activeCategory}
-        on:sendPid={handleSendPid}
-        on:saveEEPROM={handleSaveEEPROM}
-        on:readEEPROM={handleReadEEPROM}
-        on:saveProfile={handleSaveProfile}
-      />
-
-      <ProfileManager 
-        {profiles}
-        {activeCategory}
-        on:loadProfile={handleLoadProfile}
-        on:deleteProfile={handleDeleteProfile}
-      />
-    </div>
-  </div>
-
-  <!-- Modal del Simulador con Soporte de Sensores Reales en Vivo -->
-  <SimulationModal 
-    isOpen={isSimOpen}
-    category={activeCategory}
+<div class="app-root-shell">
+  <!-- Navbar Lateral de la Suite -->
+  <Sidebar 
+    {theme}
     {isConnected}
-    realTelemetryRaw={telemetry.raw}
-    currentKp={config.kp}
-    currentKd={config.kd}
-    currentBaseSpeed={config.baseSpeed}
-    currentMaxSpeed={config.maxSpeed}
-    currentBrakeSpeed={config.brakeSpeed}
-    on:close={() => isSimOpen = false}
-    on:applySettings={handleApplySimSettings}
-  />
-
-  <!-- Panel Lateral de Hardware, Flasher y Pinout -->
-  <HardwareDrawer 
-    isOpen={isHardwareOpen} 
-    onClose={() => isHardwareOpen = false} 
-    currentPort={selectedPort} 
-    currentCategory={activeCategory} 
-  />
-
-  <!-- Modal de Caja Negra & Data Logger -->
-  <BlackBoxModal 
-    bind:isOpen={isBlackBoxOpen}
-    {telemetry}
-    {isConnected}
-    {activeCarName}
-    on:close={() => isBlackBoxOpen = false}
-  />
-
-  <!-- Modal de Asistente de Auto-Sintonización PID Analítica -->
-  <AutoTuningModal 
-    bind:isOpen={isAutoTuningOpen}
     {activeCategory}
-    currentKp={config.kp}
-    currentKd={config.kd}
-    currentBaseSpeed={config.baseSpeed}
-    {isConnected}
-    on:close={() => isAutoTuningOpen = false}
-    on:applyGains={handleApplyAutoTuning}
+    {activeCarName}
+    on:openAutoTuning={() => isAutoTuningOpen = true}
+    on:openBlackBox={() => isBlackBoxOpen = true}
+    on:openHardware={() => isHardwareOpen = true}
+    on:openSim={() => isSimOpen = true}
+    on:toggleTheme={toggleTheme}
   />
-</main>
+
+  <!-- Área de Trabajo Principal Fluida -->
+  <main class="main-workspace">
+    <!-- Barra Superior Compacta: Categoría, Carro y Setpoint -->
+    <header class="workspace-header precision-card">
+      <div class="header-left">
+        <!-- Pestañas de Categoría -->
+        <div class="category-tabs">
+          <button 
+            class="category-tab {activeCategory === 'IM_16' ? 'active' : ''}" 
+            on:click={() => handleCategoryChange('IM_16')}
+          >
+            <span class="tab-icon">🏎️</span>
+            <span class="tab-label">16L Ingeniero Maker</span>
+          </button>
+
+          <button 
+            class="category-tab {activeCategory === 'CODEX_8' ? 'active' : ''}" 
+            on:click={() => handleCategoryChange('CODEX_8')}
+          >
+            <span class="tab-icon">⚡</span>
+            <span class="tab-label">8L Codex Direct</span>
+          </button>
+        </div>
+
+        <!-- Selector de Carro -->
+        <div class="fleet-selector-wrap">
+          <label for="carSelect" class="fleet-label">Carro:</label>
+          <select id="carSelect" bind:value={activeCarName} class="car-select precision-mono">
+            {#each carFleet as car}
+              <option value={car}>{car}</option>
+            {/each}
+          </select>
+          
+          {#if !showNewCarInput}
+            <button class="precision-btn btn-add-car" on:click={() => showNewCarInput = true} title="Añadir nuevo carro">
+              +
+            </button>
+          {:else}
+            <div class="new-car-modal-inline">
+              <input 
+                type="text" 
+                placeholder="Nombre..." 
+                bind:value={newCarInput} 
+                class="new-car-input precision-mono" 
+              />
+              <button class="precision-btn btn-confirm-car" on:click={handleAddCar}>✓</button>
+              <button class="precision-btn btn-cancel-car" on:click={() => showNewCarInput = false}>✕</button>
+            </div>
+          {/if}
+        </div>
+      </div>
+
+      <div class="header-right-badges">
+        <span class="precision-chip status-setpoint precision-mono">
+          SETPOINT: {activeCategory === 'CODEX_8' ? '3500' : '7500'}
+        </span>
+      </div>
+    </header>
+
+    <!-- Barra de Control Serial & Carrera -->
+    <ControlBar 
+      {ports} 
+      {selectedPort} 
+      {isConnected} 
+      {statusMessage}
+      on:connect={handleConnect}
+      on:disconnect={handleDisconnect}
+      on:refreshPorts={fetchPorts}
+      on:command={handleCommand}
+      on:openSim={() => isSimOpen = true}
+    />
+
+    <!-- Grid Principal de 3 Columnas Adaptable a Cualquier Pantalla -->
+    <div class="content-grid">
+      <!-- Columna 1: Telemetría Viva (Sensores y Tracción) -->
+      <div class="grid-column col-telemetry">
+        {#if activeCategory === 'CODEX_8'}
+          <SensorVisualizer8 
+            raw={telemetry.raw} 
+            position={telemetry.position} 
+            error={telemetry.error} 
+            state={telemetry.state} 
+          />
+        {:else}
+          <SensorVisualizer 
+            raw={telemetry.raw} 
+            position={telemetry.position} 
+            error={telemetry.error} 
+            state={telemetry.state} 
+          />
+        {/if}
+
+        <MotorVisualizer 
+          leftMotor={telemetry.leftMotor} 
+          rightMotor={telemetry.rightMotor} 
+        />
+      </div>
+
+      <!-- Columna 2: Sintonización PD & Dinámica -->
+      <div class="grid-column col-tuning">
+        <TuningPanel 
+          kp={config.kp} 
+          kd={config.kd} 
+          baseSpeed={config.baseSpeed} 
+          maxSpeed={config.maxSpeed} 
+          brakeSpeed={config.brakeSpeed} 
+          forkMode={config.forkMode} 
+          lineColor={config.lineColor} 
+          {isConnected}
+          {eepromStatus}
+          {activeCarName}
+          {activeCategory}
+          on:sendPid={handleSendPid}
+          on:saveEEPROM={handleSaveEEPROM}
+          on:readEEPROM={handleReadEEPROM}
+          on:saveProfile={handleSaveProfile}
+        />
+      </div>
+
+      <!-- Columna 3: Perfiles & Flota SQLite -->
+      <div class="grid-column col-profiles">
+        <ProfileManager 
+          {profiles}
+          {activeCategory}
+          on:loadProfile={handleLoadProfile}
+          on:deleteProfile={handleDeleteProfile}
+        />
+      </div>
+    </div>
+
+    <!-- Modal del Simulador con Soporte de Sensores Reales en Vivo -->
+    <SimulationModal 
+      isOpen={isSimOpen}
+      category={activeCategory}
+      {isConnected}
+      realTelemetryRaw={telemetry.raw}
+      currentKp={config.kp}
+      currentKd={config.kd}
+      currentBaseSpeed={config.baseSpeed}
+      currentMaxSpeed={config.maxSpeed}
+      currentBrakeSpeed={config.brakeSpeed}
+      on:close={() => isSimOpen = false}
+      on:applySettings={handleApplySimSettings}
+    />
+
+    <!-- Panel Lateral de Hardware, Flasher y Pinout -->
+    <HardwareDrawer 
+      isOpen={isHardwareOpen} 
+      onClose={() => isHardwareOpen = false} 
+      currentPort={selectedPort} 
+      currentCategory={activeCategory} 
+    />
+
+    <!-- Modal de Caja Negra & Data Logger -->
+    <BlackBoxModal 
+      bind:isOpen={isBlackBoxOpen}
+      {telemetry}
+      {isConnected}
+      {activeCarName}
+      on:close={() => isBlackBoxOpen = false}
+    />
+
+    <!-- Modal de Asistente de Auto-Sintonización PID Analítica -->
+    <AutoTuningModal 
+      bind:isOpen={isAutoTuningOpen}
+      {activeCategory}
+      currentKp={config.kp}
+      currentKd={config.kd}
+      currentBaseSpeed={config.baseSpeed}
+      {isConnected}
+      on:close={() => isAutoTuningOpen = false}
+      on:applyGains={handleApplyAutoTuning}
+    />
+  </main>
+</div>
 
 <style>
-  .dashboard-layout {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 0.75rem 1rem;
+  .app-root-shell {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
     box-sizing: border-box;
+    background: var(--bg-app);
+    padding: 0.5rem;
+    gap: 0.5rem;
   }
 
-  .app-header {
+  .main-workspace {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0.25rem 0.5rem 1rem 0.5rem;
+    box-sizing: border-box;
+    gap: 0.65rem;
+    min-width: 0;
+  }
+
+  .workspace-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 0.75rem;
-    padding: 0.55rem 0.85rem;
+    padding: 0.45rem 0.85rem;
     flex-wrap: wrap;
     gap: 0.65rem;
   }
 
-  .brand {
+  .header-left {
     display: flex;
     align-items: center;
-    gap: 0.65rem;
+    gap: 0.75rem;
+    flex-wrap: wrap;
   }
 
-  .logo-icon {
-    font-size: 1.6rem;
-  }
-
-  .title-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .app-header h1 {
-    margin: 0;
-    font-size: 1.15rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    background: linear-gradient(90deg, var(--text-heading), var(--accent-cyan));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-
-  .version-chip {
-    background: var(--chip-blue-bg);
-    border: 1px solid var(--chip-blue-border);
-    color: var(--chip-blue-text);
-    font-size: 0.62rem;
-  }
-
-  .subtitle {
-    margin: 0.1rem 0 0 0;
+  .status-setpoint {
     font-size: 0.7rem;
-    color: var(--text-secondary);
+    font-weight: 700;
+    color: var(--accent-cyan);
+    background: rgba(0, 242, 254, 0.1);
+    border: 1px solid rgba(0, 242, 254, 0.3);
+    padding: 0.25rem 0.6rem;
   }
 
   .category-tabs {
@@ -754,124 +728,51 @@
     font-size: 0.7rem;
   }
 
-  .header-controls {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-  }
-
-  .autotune-btn {
-    background: rgba(99, 102, 241, 0.15);
-    border: 1px solid rgba(99, 102, 241, 0.4);
-    color: #818cf8;
-    padding: 0.35rem 0.65rem;
-    font-size: 0.75rem;
-    font-weight: 700;
-    transition: all 0.15s ease;
-  }
-
-  .autotune-btn:hover {
-    background: rgba(99, 102, 241, 0.25);
-    border-color: #818cf8;
-  }
-
-  :global([data-theme="light"]) .autotune-btn {
-    background: #eef2ff;
-    border-color: #c7d2fe;
-    color: #4f46e5;
-  }
-
-  :global([data-theme="light"]) .autotune-btn:hover {
-    background: #e0e7ff;
-    border-color: #6366f1;
-  }
-
-  .blackbox-btn {
-    background: rgba(239, 68, 68, 0.12);
-    border: 1px solid rgba(239, 68, 68, 0.35);
-    color: #ef4444;
-    padding: 0.35rem 0.65rem;
-    font-size: 0.75rem;
-    font-weight: 700;
-    transition: all 0.15s ease;
-  }
-
-  .blackbox-btn:hover {
-    background: rgba(239, 68, 68, 0.22);
-    border-color: #ef4444;
-  }
-
-  :global([data-theme="light"]) .blackbox-btn {
-    background: #fef2f2;
-    border-color: #fecaca;
-    color: #dc2626;
-  }
-
-  :global([data-theme="light"]) .blackbox-btn:hover {
-    background: #fee2e2;
-    border-color: #dc2626;
-  }
-
-  .hardware-btn,
-  .theme-toggle {
-    background: var(--bg-card);
-    border: 1px solid var(--border-subtle);
-    color: var(--text-primary);
-    padding: 0.35rem 0.65rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    transition: all 0.15s ease;
-  }
-
-  .hardware-btn:hover,
-  .theme-toggle:hover {
-    border-color: var(--border-highlight);
-    background: var(--bg-hover);
-  }
-
-  .system-status {
-    border: 1px solid transparent;
-  }
-
-  .status-online {
-    background: var(--chip-green-bg);
-    border-color: var(--chip-green-border);
-    color: var(--chip-green-text);
-  }
-
-  .status-offline {
-    background: var(--track-bg);
-    border-color: var(--border-subtle);
-    color: var(--text-muted);
-  }
-
-  .live-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #ef4444;
-  }
-
-  .live-dot.active {
-    background: #10b981;
-    box-shadow: 0 0 8px #10b981;
-  }
-
+  /* Grid Principal Adaptable de 3 Columnas */
   .content-grid {
     display: grid;
-    grid-template-columns: 1.1fr 1fr;
+    grid-template-columns: 1.15fr 1fr 1fr;
     gap: 0.75rem;
+    align-items: start;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .grid-column {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  @media (max-width: 1550px) {
+    .content-grid {
+      grid-template-columns: 1.15fr 1fr;
+    }
+    .col-profiles {
+      grid-column: 2;
+    }
   }
 
   @media (max-width: 1040px) {
     .content-grid {
       grid-template-columns: 1fr;
     }
+    .col-profiles {
+      grid-column: 1;
+    }
   }
 
-  .left-column, .right-column {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+  @media (max-width: 820px) {
+    .app-root-shell {
+      flex-direction: column;
+      height: auto;
+      min-height: 100vh;
+      overflow-y: auto;
+    }
+    .main-workspace {
+      height: auto;
+      overflow-y: visible;
+    }
   }
 </style>

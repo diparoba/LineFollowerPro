@@ -18,8 +18,6 @@
   let profileName = '';
 
   $: setpointVal = activeCategory === 'CODEX_8' ? 3500 : 7500;
-  $: maxKpSlider = Math.max(1.5, Math.ceil((Number(kp) || 0) * 2) / 2 || 1.5);
-  $: maxKdSlider = Math.max(20.0, Math.ceil((Number(kd) || 0) / 5) * 5 || 20.0);
 
   function handleSendPid() {
     dispatch('sendPid', {
@@ -83,9 +81,16 @@
         <label for="kp">Sensibilidad (Kp)</label>
         <span class="val-display precision-mono">{(Number(kp) || 0).toFixed(4)}</span>
       </div>
-      <div class="slider-row">
-        <input id="kp" type="range" min="0" max={maxKpSlider} step="0.0001" bind:value={kp} />
-        <input type="number" min="0" step="0.0001" bind:value={kp} class="num-box precision-mono" />
+      <div class="direct-num-wrap">
+        <input 
+          id="kp" 
+          type="number" 
+          min="0" 
+          step="0.0001" 
+          bind:value={kp} 
+          class="direct-num-input precision-mono" 
+          placeholder="0.0000"
+        />
       </div>
     </div>
 
@@ -95,9 +100,16 @@
         <label for="kd">Corrección (Kd)</label>
         <span class="val-display precision-mono">{(Number(kd) || 0).toFixed(4)}</span>
       </div>
-      <div class="slider-row">
-        <input id="kd" type="range" min="0" max={maxKdSlider} step="0.0001" bind:value={kd} />
-        <input type="number" min="0" step="0.0001" bind:value={kd} class="num-box precision-mono" />
+      <div class="direct-num-wrap">
+        <input 
+          id="kd" 
+          type="number" 
+          min="0" 
+          step="0.0001" 
+          bind:value={kd} 
+          class="direct-num-input precision-mono" 
+          placeholder="0.0000"
+        />
       </div>
     </div>
 
@@ -321,6 +333,31 @@
     accent-color: var(--accent-cyan);
     cursor: pointer;
     height: 6px;
+  }
+
+  .direct-num-wrap {
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+
+  .direct-num-input {
+    width: 100%;
+    padding: 0.35rem 0.55rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-heading);
+    background: var(--bg-input);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-btn);
+    box-sizing: border-box;
+    transition: all 0.15s ease;
+  }
+
+  .direct-num-input:focus {
+    outline: none;
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 0 2px rgba(0, 242, 254, 0.25);
   }
 
   .num-box {

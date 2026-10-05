@@ -52,6 +52,7 @@ backend/obj/
 *.db-journal
 *.db-wal
 *.db-shm
+/follower.db
 
 # Legacy Large Binaries (> 100 MB GitHub limit)
 release_portable_v0.1.0-beta/

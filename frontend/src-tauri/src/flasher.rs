@@ -316,7 +316,14 @@ impl FlasherService {
         // 1. Probar ejecutable local embebido en resources/esptool/esptool.exe
         if let Some(p) = Self::resolve_path(app, "esptool/esptool.exe") {
             if p.exists() {
-                return Ok((p, vec![]));
+                let mut test_cmd = Command::new(&p);
+                #[cfg(target_os = "windows")]
+                test_cmd.creation_flags(CREATE_NO_WINDOW);
+                if let Ok(status) = test_cmd.arg("version").stdout(Stdio::null()).stderr(Stdio::null()).status() {
+                    if status.success() {
+                        return Ok((p, vec![]));
+                    }
+                }
             }
         }
 
@@ -413,7 +420,24 @@ impl FlasherService {
 
         let mut full_log = String::new();
 
-        if let Some(stdout) = child.stdout.take() {
+        let stdout = child.stdout.take();
+        let stderr = child.stderr.take();
+
+        let app_err = app.clone();
+        let stderr_handle = std::thread::spawn(move || {
+            let mut err_log = String::new();
+            if let Some(stderr) = stderr {
+                let reader = BufReader::new(stderr);
+                for line in reader.lines().map_while(Result::ok) {
+                    let _ = app_err.emit("flash-log", line.clone());
+                    err_log.push_str(&line);
+                    err_log.push('\n');
+                }
+            }
+            err_log
+        });
+
+        if let Some(stdout) = stdout {
             let reader = BufReader::new(stdout);
             for line in reader.lines().map_while(Result::ok) {
                 let _ = app.emit("flash-log", line.clone());
@@ -422,13 +446,8 @@ impl FlasherService {
             }
         }
 
-        if let Some(stderr) = child.stderr.take() {
-            let reader = BufReader::new(stderr);
-            for line in reader.lines().map_while(Result::ok) {
-                let _ = app.emit("flash-log", line.clone());
-                full_log.push_str(&line);
-                full_log.push('\n');
-            }
+        if let Ok(err_log) = stderr_handle.join() {
+            full_log.push_str(&err_log);
         }
 
         let status = child.wait().map(|s| s.success()).unwrap_or(false);
