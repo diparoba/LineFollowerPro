@@ -26,6 +26,10 @@ __attribute__((used)) const char BT_DEVICE_NAME[32] = "##BT_CAR_CUSTOM_NAME_TOKE
 // Standby
 #define PIN_STBY 26
 
+// Inversión de Polaridad de Motores (true: invierte sentido de giro para corregir avance/giro)
+#define INVERT_MOTOR_A true
+#define INVERT_MOTOR_B true
+
 // Configuración LEDC PWM (Ultrasónico 20 kHz para evitar silbido de motor)
 #define PWM_FREQ 20000
 #define PWM_RES  8
@@ -36,14 +40,14 @@ __attribute__((used)) const char BT_DEVICE_NAME[32] = "##BT_CAR_CUSTOM_NAME_TOKE
 uint8_t currentSpeed = 200; // Por defecto ~78%
 
 void setMotors(int speedA, int speedB) {
-    // Control Motor A
+    // Control Motor A (Izquierdo)
     if (speedA > 0) {
-        digitalWrite(PIN_AIN1, HIGH);
-        digitalWrite(PIN_AIN2, LOW);
+        digitalWrite(PIN_AIN1, INVERT_MOTOR_A ? LOW : HIGH);
+        digitalWrite(PIN_AIN2, INVERT_MOTOR_A ? HIGH : LOW);
         ledcWrite(PWM_CH_A, speedA > 255 ? 255 : speedA);
     } else if (speedA < 0) {
-        digitalWrite(PIN_AIN1, LOW);
-        digitalWrite(PIN_AIN2, HIGH);
+        digitalWrite(PIN_AIN1, INVERT_MOTOR_A ? HIGH : LOW);
+        digitalWrite(PIN_AIN2, INVERT_MOTOR_A ? LOW : HIGH);
         ledcWrite(PWM_CH_A, (-speedA) > 255 ? 255 : -speedA);
     } else {
         digitalWrite(PIN_AIN1, LOW);
@@ -51,14 +55,14 @@ void setMotors(int speedA, int speedB) {
         ledcWrite(PWM_CH_A, 0);
     }
 
-    // Control Motor B
+    // Control Motor B (Derecho)
     if (speedB > 0) {
-        digitalWrite(PIN_BIN1, HIGH);
-        digitalWrite(PIN_BIN2, LOW);
+        digitalWrite(PIN_BIN1, INVERT_MOTOR_B ? LOW : HIGH);
+        digitalWrite(PIN_BIN2, INVERT_MOTOR_B ? HIGH : LOW);
         ledcWrite(PWM_CH_B, speedB > 255 ? 255 : speedB);
     } else if (speedB < 0) {
-        digitalWrite(PIN_BIN1, LOW);
-        digitalWrite(PIN_BIN2, HIGH);
+        digitalWrite(PIN_BIN1, INVERT_MOTOR_B ? HIGH : LOW);
+        digitalWrite(PIN_BIN2, INVERT_MOTOR_B ? LOW : HIGH);
         ledcWrite(PWM_CH_B, (-speedB) > 255 ? 255 : -speedB);
     } else {
         digitalWrite(PIN_BIN1, LOW);
