@@ -1,0 +1,53 @@
+========================================================================
+LINEFOLLOWER PRO v1.1.0 - SUITE PORTABLE AUTÓNOMA & FLASHEADOR ESP32 BT
+========================================================================
+
+Esta versión (v1.1.0) introduce mejoras mayores de interfaz, soporte
+para nuevos microcontroladores y precisión extendida de sintonización.
+
+NOVEDADES Y CAMBIOS EN v1.1.0:
+------------------------------------------------------------------------
+1. FLASHEADOR DEDICADO PARA CARRO BLUETOOTH ESP32 DEVKIT V1:
+   - Pestaña "🚗 Carro BT ESP32" en el panel lateral de Hardware.
+   - Inyección dinámica en memoria del nombre Bluetooth antes de flashear
+     (sin necesidad de recompilar código en C++).
+   - Driver de motores TB6612FNG con modulación ultrasónica LEDC a 20 kHz
+     (PWMA: GPIO 32, AIN1: GPIO 25, AIN2: GPIO 33, PWMB: GPIO 18,
+      BIN1: GPIO 19, BIN2: GPIO 27, STBY: GPIO 26).
+   - Inversión de polaridad por software (INVERT_MOTOR_A / INVERT_MOTOR_B)
+     para que avance 'F' y giros 'L'/'R' coincidan con la cinemática real.
+   - Soporte modernizado de esptool v5.x con eliminación de warnings de sintaxis.
+
+2. INTERFAZ ULTRA-ANCHA FLUIDA & SIDEBAR LATERAL:
+   - Nuevo menú de navegación lateral izquierdo (Sidebar.svelte) con
+     selector de temas, indicador de versión v1.1.0 y accesos directos.
+   - Contenedor elástico adaptable a monitores panorámicos y portátiles.
+
+3. SINTONIZACIÓN PID NUMÉRICA DE ALTA PRECISIÓN:
+   - Ganancias Kp y Kd con 4 decimales directos (0.0001).
+   - Eliminación de límites inferiores y superiores artificiales
+     (mínimo 0.0000, máximo libre según necesidad de competencia).
+
+4. PERSISTENCIA AUTÓNOMA Y DRIVERS OFFLINE:
+   - Base de datos local SQLite (follower.db) portátil.
+   - Instalador de driver USB CH340 incluido en resources/drivers/.
+
+INSTRUCCIONES DE USO:
+------------------------------------------------------------------------
+1. Ejecuta "LineFollowerPro.exe" directamente desde esta carpeta o una memoria USB.
+2. No requiere conexión a Internet ni instalación previa de Python/Node.js.
+3. Para flashear tu ESP32:
+   - Abre la pestaña "🚗 Carro BT ESP32".
+   - Elige el nombre que desees para el carro (ej. MiCarro_01).
+   - Selecciona el puerto COM de tu ESP32 y pulsa "Flashear Carro ESP32".
+   - Si tu placa lo requiere, mantén presionado BOOT durante el inicio de la carga.
+   - Al terminar, si no lo detecta de inmediato tu teléfono, pulsa una vez
+     el botón EN (RST) del ESP32.
+
+HISTORIAL DE VERSIONES CONSERVADAS:
+------------------------------------------------------------------------
+- release_portable_v0.1.0-beta   : Primera versión alfa de telemetría.
+- release_desktop_v0.2.0-beta    : Versión beta de escritorio Tauri.
+- release_desktop_v1.0.0         : Golden Master (PID clásico, Nano 16L/8L, autotuning).
+- release_desktop_v1.1.0 (ACTUAL): Flasheador ESP32 BT, 4 decimales PID, Sidebar fluido.
+========================================================================

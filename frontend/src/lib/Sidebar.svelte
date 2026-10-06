@@ -38,7 +38,7 @@
         <h1 class="brand-title">LineFollower</h1>
         <div class="brand-subrow">
           <span class="brand-badge">PRO</span>
-          <span class="precision-chip version-chip">v1.0.0</span>
+          <span class="precision-chip version-chip">v1.1.0</span>
         </div>
       </div>
     </div>

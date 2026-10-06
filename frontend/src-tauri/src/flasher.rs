@@ -293,6 +293,7 @@ impl FlasherService {
         if status {
             let msg = format!("Firmware Carro Bluetooth subido con éxito al ESP32 con nombre '{}'", bt_name);
             let _ = app.emit("flash-log", format!("✅ {}", msg));
+            let _ = app.emit("flash-log", "💡 Nota: Si el Bluetooth no aparece de inmediato en tu celular, pulsa una vez el botón EN (RST) del ESP32.".to_string());
             Ok(FlashResult {
                 success: true,
                 message: msg,
@@ -392,13 +393,13 @@ impl FlasherService {
         cmd.arg("--chip").arg("esp32")
             .arg("--port").arg(port)
             .arg("--baud").arg(baud.to_string())
-            .arg("--before").arg("default_reset")
-            .arg("--after").arg("hard_reset")
-            .arg("write_flash")
+            .arg("--before").arg("default-reset")
+            .arg("--after").arg("hard-reset")
+            .arg("write-flash")
             .arg("-z")
-            .arg("--flash_mode").arg("dio")
-            .arg("--flash_freq").arg("40m")
-            .arg("--flash_size").arg("detect")
+            .arg("--flash-mode").arg("dio")
+            .arg("--flash-freq").arg("40m")
+            .arg("--flash-size").arg("detect")
             .arg("0x1000").arg(bootloader)
             .arg("0x8000").arg(partitions)
             .arg("0xe000").arg(boot_app0)
