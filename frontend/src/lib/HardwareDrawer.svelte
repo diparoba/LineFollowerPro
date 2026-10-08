@@ -1,6 +1,18 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { flashFirmware, flashFirmwareEsp32, installDriver, subscribeFlashLogs, getPorts } from './tauriBridge.js';
+  import {
+    flashFirmware,
+    flashFirmwareEsp32,
+    diagnoseEsp32,
+    eraseFlashEsp32,
+    installDriver,
+    subscribeFlashLogs,
+    getPorts,
+    isTauri,
+    isWebSerialSupported,
+    requestWebSerialPort,
+    getActiveWebSerialPort
+  } from './tauriBridge.js';
 
   export let isOpen = false;
   export let onClose = () => {};
@@ -22,12 +34,17 @@
   let unsubscribeLogs = null;
   let terminalContainer;
 
-  // ESP32 Car state
+  // ESP32 Car & Rescue state
+  let hasWebSerial = isWebSerialSupported();
   let esp32Port = currentPort || '';
   let esp32BtName = 'Carro_BT_ESP32';
   let esp32Baud = 460800;
   let isFlashingEsp32 = false;
+  let isDiagnosingEsp32 = false;
+  let isErasingFlashEsp32 = false;
   let esp32FlashStatus = { type: '', message: '' };
+
+  $: isEsp32Busy = isFlashingEsp32 || isDiagnosingEsp32 || isErasingFlashEsp32;
 
   $: if (currentPort && !esp32Port) {
     esp32Port = currentPort;
@@ -109,6 +126,98 @@
     }
   }
 
+  async function handleRequestWebSerialPort() {
+    try {
+      const port = await requestWebSerialPort();
+      if (port) {
+        esp32Port = 'USB Serial (Web Serial)';
+        if (!availablePorts.includes(esp32Port)) {
+          availablePorts = [esp32Port, ...availablePorts];
+        }
+        esp32FlashStatus = { type: 'success', message: '¡Puerto COM autorizado exitosamente en el navegador!' };
+        return port;
+      }
+    } catch (err) {
+      esp32FlashStatus = { type: 'error', message: err.message };
+      throw err;
+    }
+  }
+
+  async function handleDiagnoseEsp32() {
+    if (!isTauri() && !esp32Port && !getActiveWebSerialPort()) {
+      try {
+        await handleRequestWebSerialPort();
+      } catch (e) {
+        return;
+      }
+    }
+    if (isTauri() && !esp32Port) {
+      esp32FlashStatus = { type: 'error', message: 'Selecciona un puerto COM para diagnosticar el ESP32.' };
+      return;
+    }
+
+    isDiagnosingEsp32 = true;
+    esp32FlashStatus = { type: 'info', message: 'Ejecutando diagnóstico de salud para ESP32...' };
+    flashLogs = [
+      `[${new Date().toLocaleTimeString()}] Iniciando diagnóstico de hardware ESP32...`
+    ];
+
+    try {
+      const res = await diagnoseEsp32(esp32Port, esp32Baud);
+      if (res.success) {
+        esp32FlashStatus = { type: 'success', message: res.message };
+      } else {
+        esp32FlashStatus = { type: 'error', message: res.message };
+      }
+    } catch (e) {
+      esp32FlashStatus = { type: 'error', message: e.toString() };
+      flashLogs = [...flashLogs, `[ERROR] ${e.toString()}`];
+    } finally {
+      isDiagnosingEsp32 = false;
+    }
+  }
+
+  async function handleEraseFlashEsp32() {
+    if (!isTauri() && !esp32Port && !getActiveWebSerialPort()) {
+      try {
+        await handleRequestWebSerialPort();
+      } catch (e) {
+        return;
+      }
+    }
+    if (isTauri() && !esp32Port) {
+      esp32FlashStatus = { type: 'error', message: 'Selecciona un puerto COM para formatear el ESP32.' };
+      return;
+    }
+
+    const confirmed = confirm(
+      `⚠️ ¿Deseas ejecutar un FORMATEO TOTAL (Erase Flash)?\n\n` +
+      `Esto borrará el 100% de la memoria flash del ESP32, eliminando configuraciones residuales y sectores NVS corruptos.\n` +
+      `Es la solución recomendada cuando el Bluetooth no aparece o la placa tiene particiones corruptas.`
+    );
+    if (!confirmed) return;
+
+    isErasingFlashEsp32 = true;
+    esp32FlashStatus = { type: 'info', message: 'Borrando completamente la memoria Flash del ESP32...' };
+    flashLogs = [
+      `[${new Date().toLocaleTimeString()}] Iniciando borrado completo (Erase Flash)...`
+    ];
+
+    try {
+      const res = await eraseFlashEsp32(esp32Port, esp32Baud);
+      if (res.success) {
+        esp32FlashStatus = { type: 'success', message: res.message };
+      } else {
+        esp32FlashStatus = { type: 'error', message: res.message };
+      }
+    } catch (e) {
+      esp32FlashStatus = { type: 'error', message: e.toString() };
+      flashLogs = [...flashLogs, `[ERROR] ${e.toString()}`];
+    } finally {
+      isErasingFlashEsp32 = false;
+    }
+  }
+
   async function handleFlashEsp32() {
     const cleanName = esp32BtName.trim();
     if (!cleanName) {
@@ -119,7 +228,14 @@
       esp32FlashStatus = { type: 'error', message: 'El nombre Bluetooth no puede exceder 31 caracteres.' };
       return;
     }
-    if (!esp32Port) {
+    if (!isTauri() && !esp32Port && !getActiveWebSerialPort()) {
+      try {
+        await handleRequestWebSerialPort();
+      } catch (e) {
+        return;
+      }
+    }
+    if (isTauri() && !esp32Port) {
       esp32FlashStatus = { type: 'error', message: 'Selecciona un puerto COM para el ESP32.' };
       return;
     }
@@ -127,7 +243,7 @@
     isFlashingEsp32 = true;
     esp32FlashStatus = { type: 'info', message: 'Iniciando subida de software a ESP32 DevKit V1...' };
     flashLogs = [
-      `[${new Date().toLocaleTimeString()}] Iniciando flasheo ESP32 Carro BT en ${esp32Port} (Nombre: "${cleanName}")...`
+      `[${new Date().toLocaleTimeString()}] Iniciando flasheo ESP32 Carro BT en ${esp32Port || 'Web Serial'} (Nombre: "${cleanName}")...`
     ];
 
     try {
@@ -561,6 +677,70 @@
             </p>
           </div>
 
+          {#if !isTauri()}
+            <!-- Web Serial Notice & Grant Permission -->
+            <div class="web-serial-banner">
+              <span class="web-serial-icon">🌐</span>
+              <div class="web-serial-text">
+                <strong>Modo Web Serial (Navegador):</strong>
+                <span>Diagnostica, formatea y flashea tu ESP32 directamente desde la web concediendo permisos a tu puerto USB COM.</span>
+              </div>
+              <button class="btn-web-connect" on:click={handleRequestWebSerialPort} disabled={isEsp32Busy}>
+                🔌 Conceder Permiso COM
+              </button>
+            </div>
+          {/if}
+
+          <!-- Diagnostic & Rescue Suite Card -->
+          <div class="section-card rescue-card">
+            <div class="card-header-row">
+              <h4>🩺 Diagnóstico & Rescate ESP32</h4>
+              <span class="badge-chip warning">Herramientas Web</span>
+            </div>
+            <p class="section-desc">
+              Herramientas de inspección física y rescate directo desde el navegador: detecta si la placa calienta por cortocircuito o restaura módulos con particiones / Bluetooth corrupto.
+            </p>
+
+            <div class="rescue-actions-grid">
+              <button 
+                class="btn-rescue btn-diag" 
+                on:click={handleDiagnoseEsp32} 
+                disabled={isEsp32Busy}
+                title="Verifica procesador, MAC, y si la memoria flash SPI está dañada o en corto (0xFF)"
+              >
+                {#if isDiagnosingEsp32}
+                  <span class="spinner-inline">⏳</span> Diagnosticando...
+                {:else}
+                  <span>🩺</span> Diagnosticar Salud ESP32
+                {/if}
+              </button>
+
+              <button 
+                class="btn-rescue btn-erase" 
+                on:click={handleEraseFlashEsp32} 
+                disabled={isEsp32Busy}
+                title="Borra el 100% de la memoria flash para solucionar tablas NVS corruptas o fallos de Bluetooth"
+              >
+                {#if isErasingFlashEsp32}
+                  <span class="spinner-inline">⏳</span> Formateando Flash...
+                {:else}
+                  <span>🧹</span> Formateo Total (Erase Flash)
+                {/if}
+              </button>
+            </div>
+
+            <div class="rescue-hints-grid">
+              <div class="rescue-hint-item">
+                <strong>🔥 ¿Tu ESP32 se calienta intensamente al conectar?</strong>
+                <p>El botón de <em>Diagnóstico</em> analizará la memoria SPI interna. Si responde con error (0xFF / 0xFFFF), desconéctalo de inmediato; el integrado sufrió sobretensión o retorno inductivo de motores (Back-EMF).</p>
+              </div>
+              <div class="rescue-hint-item">
+                <strong>📡 ¿No aparece el Bluetooth tras flashear?</strong>
+                <p>Usa <em>Formateo Total</em> para limpiar los sectores NVS residuales de programas anteriores que bloquean el stack Bluedroid. Luego vuelve a flashear el firmware.</p>
+              </div>
+            </div>
+          </div>
+
           <!-- Configuration and Flasher Form -->
           <div class="section-card">
             <h4>⚙️ Configuración y Flasheo</h4>
@@ -579,7 +759,7 @@
                   bind:value={esp32BtName}
                   maxlength="31"
                   placeholder="Ej: Carro_BT_01"
-                  disabled={isFlashingEsp32}
+                  disabled={isEsp32Busy}
                 />
                 <span class="char-counter">{esp32BtName.length}/31</span>
               </div>
@@ -595,10 +775,10 @@
                   id="esp32-port-select"
                   class="select-input" 
                   bind:value={esp32Port} 
-                  disabled={isFlashingEsp32}
+                  disabled={isEsp32Busy}
                 >
                   {#if availablePorts.length === 0}
-                    <option value="">No hay puertos COM detectados</option>
+                    <option value="">{isTauri() ? 'No hay puertos COM detectados' : 'Haz clic en "🔌 Permiso COM" para seleccionar'}</option>
                   {:else}
                     {#each availablePorts as port}
                       <option value={port}>{port}</option>
@@ -609,10 +789,20 @@
                   class="pill-btn" 
                   on:click={refreshPorts} 
                   title="Refrescar lista de puertos"
-                  disabled={isFlashingEsp32}
+                  disabled={isEsp32Busy}
                 >
                   🔄
                 </button>
+                {#if !isTauri()}
+                  <button 
+                    class="pill-btn web-grant-pill" 
+                    on:click={handleRequestWebSerialPort} 
+                    title="Conceder permisos a un nuevo puerto USB COM en el navegador"
+                    disabled={isEsp32Busy}
+                  >
+                    🔌 Conceder
+                  </button>
+                {/if}
               </div>
             </div>
 
@@ -625,7 +815,7 @@
                 id="esp32-baud-select"
                 class="select-input" 
                 bind:value={esp32Baud} 
-                disabled={isFlashingEsp32}
+                disabled={isEsp32Busy}
               >
                 <option value={460800}>460800 baudios (Recomendado - Ultra Rápido)</option>
                 <option value={115200}>115200 baudios (Estándar)</option>
@@ -637,7 +827,7 @@
             <button 
               class="btn-flash" 
               on:click={handleFlashEsp32} 
-              disabled={isFlashingEsp32 || !esp32Port}
+              disabled={isEsp32Busy}
             >
               {#if isFlashingEsp32}
                 <span class="spinner-inline">⏳</span> Subiendo a ESP32...
@@ -1529,5 +1719,177 @@
 
   .apps-recommendation li {
     margin-bottom: 0.25rem;
+  }
+
+  /* Web Serial & Rescue Styles */
+  .btn-flash {
+    width: 100%;
+    padding: 0.85rem;
+    background: #0284c7;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.9rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: background 0.2s, transform 0.1s;
+  }
+
+  .btn-flash:hover:not(:disabled) {
+    background: #0369a1;
+  }
+
+  .btn-flash:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .badge-chip.warning {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.3);
+  }
+
+  .web-serial-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    background: rgba(14, 165, 233, 0.1);
+    border: 1px solid rgba(14, 165, 233, 0.3);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .web-serial-icon {
+    font-size: 1.5rem;
+  }
+
+  .web-serial-text {
+    flex: 1;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  .web-serial-text strong {
+    display: block;
+    color: #38bdf8;
+    margin-bottom: 0.15rem;
+  }
+
+  .btn-web-connect {
+    padding: 0.5rem 0.85rem;
+    background: #0284c7;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.78rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s;
+  }
+
+  .btn-web-connect:hover:not(:disabled) {
+    background: #0369a1;
+  }
+
+  .web-grant-pill {
+    background: rgba(14, 165, 233, 0.18);
+    color: #38bdf8;
+    border: 1px solid rgba(14, 165, 233, 0.3);
+    white-space: nowrap;
+  }
+
+  .rescue-card {
+    border-color: rgba(245, 158, 11, 0.35);
+  }
+
+  .rescue-actions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin: 1rem 0;
+  }
+
+  @media (max-width: 500px) {
+    .rescue-actions-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .btn-rescue {
+    padding: 0.75rem 0.6rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+  }
+
+  .btn-diag {
+    background: rgba(14, 165, 233, 0.15);
+    color: #38bdf8;
+    border-color: rgba(14, 165, 233, 0.4);
+  }
+
+  .btn-diag:hover:not(:disabled) {
+    background: rgba(14, 165, 233, 0.28);
+    border-color: #38bdf8;
+    color: #ffffff;
+    transform: translateY(-1px);
+  }
+
+  .btn-erase {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border-color: rgba(239, 68, 68, 0.4);
+  }
+
+  .btn-erase:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.28);
+    border-color: #ef4444;
+    color: #ffffff;
+    transform: translateY(-1px);
+  }
+
+  .btn-rescue:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .rescue-hints-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .rescue-hint-item strong {
+    color: var(--text-primary);
+    display: block;
+    margin-bottom: 0.2rem;
+  }
+
+  .rescue-hint-item p {
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.45;
   }
 </style>

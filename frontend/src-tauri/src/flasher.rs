@@ -275,16 +275,34 @@ impl FlasherService {
         let _ = app.emit("flash-log", format!("🚀 Ejecutando esptool: {}", esptool_prog.display()));
 
         // 3. Ejecutar esptool
-        let (status, log) = Self::run_esptool(
+        let baud_str = baud.to_string();
+        let bootloader_str = bootloader_bin.to_string_lossy();
+        let partitions_str = partitions_bin.to_string_lossy();
+        let boot_app0_str = boot_app0_bin.to_string_lossy();
+        let temp_bin_str = temp_bin_path.to_string_lossy();
+
+        let flash_args = [
+            "--chip", "esp32",
+            "--port", port,
+            "--baud", &baud_str,
+            "--before", "default-reset",
+            "--after", "hard-reset",
+            "write-flash",
+            "-z",
+            "--flash-mode", "dio",
+            "--flash-freq", "40m",
+            "--flash-size", "detect",
+            "0x1000", &bootloader_str,
+            "0x8000", &partitions_str,
+            "0xe000", &boot_app0_str,
+            "0x10000", &temp_bin_str,
+        ];
+
+        let (status, log) = Self::execute_esptool(
             app,
             &esptool_prog,
             &prefix_args,
-            port,
-            baud,
-            &bootloader_bin,
-            &partitions_bin,
-            &boot_app0_bin,
-            &temp_bin_path,
+            &flash_args,
         );
 
         // Limpiar archivo temporal
@@ -304,6 +322,137 @@ impl FlasherService {
             let msg = format!("Fallo en el flasheo del ESP32 a {} baudios", baud);
             let _ = app.emit("flash-log", format!("❌ {}", msg));
             let _ = app.emit("flash-log", "💡 Sugerencia: Si queda esperando en 'Connecting...', mantén presionado el botón BOOT en el ESP32.".to_string());
+            Ok(FlashResult {
+                success: false,
+                message: msg,
+                log,
+                used_baud: baud,
+            })
+        }
+    }
+
+    pub fn diagnose_esp32(
+        app: &AppHandle,
+        port: &str,
+        baud: u32,
+    ) -> Result<FlashResult, String> {
+        let (esptool_prog, prefix_args) = Self::resolve_esptool(app)?;
+
+        let _ = app.emit("flash-log", "==================================================".to_string());
+        let _ = app.emit("flash-log", format!("🩺 INICIANDO DIAGNÓSTICO DE SALUD ESP32 ({})", port));
+        let _ = app.emit("flash-log", format!("⚡ Velocidad UART: {} baudios", baud));
+        let _ = app.emit("flash-log", format!("🚀 Ejecutando esptool: {}", esptool_prog.display()));
+        let _ = app.emit("flash-log", "==================================================".to_string());
+
+        let baud_str = baud.to_string();
+        let diag_args = [
+            "--chip", "esp32",
+            "--port", port,
+            "--baud", &baud_str,
+            "--before", "default-reset",
+            "--after", "hard-reset",
+            "flash-id",
+        ];
+
+        let (status, log) = Self::execute_esptool(app, &esptool_prog, &prefix_args, &diag_args);
+
+        let lower_log = log.to_lowercase();
+        let is_flash_bad = lower_log.contains("manufacturer: ff")
+            || lower_log.contains("device: ffff")
+            || lower_log.contains("failed to communicate with the flash chip")
+            || lower_log.contains("invalid header: 0xffffffff");
+
+        if is_flash_bad {
+            let msg = "⚠️ FALLO CRÍTICO: Memoria Flash SPI no responde (0xFF / 0xFFFF).".to_string();
+            let _ = app.emit("flash-log", "".to_string());
+            let _ = app.emit("flash-log", "❌ ERROR GRAVE DE HARDWARE: Memoria Flash SPI inaccesible (Manufacturer: ff / Device: ffff).".to_string());
+            let _ = app.emit("flash-log", "📌 DIAGNÓSTICO DETALLADO:".to_string());
+            let _ = app.emit("flash-log", "  1. 🔌 Pines SPI (GPIO 6 al 11) conectados externamente o en cortocircuito con chasis/driver.".to_string());
+            let _ = app.emit("flash-log", "  2. ⚡ Caída severa de voltaje en la línea 3.3V (voltaje < 2.7V por puerto USB deficiente o regulador dañado).".to_string());
+            let _ = app.emit("flash-log", "  3. 🔥 Si la placa se calienta intensamente al tacto: Daño físico irreversible por retorno inductivo (Back-EMF) de los motores o sobretensión.".to_string());
+            let _ = app.emit("flash-log", "⚠️ RECOMENDACIÓN: Si el ESP32 calienta al conectarlo por USB, desconéctalo de inmediato para proteger tu PC.".to_string());
+
+            Ok(FlashResult {
+                success: false,
+                message: msg,
+                log,
+                used_baud: baud,
+            })
+        } else if !status {
+            let msg = format!("Fallo de comunicación UART con el ESP32 en {}", port);
+            let _ = app.emit("flash-log", "".to_string());
+            let _ = app.emit("flash-log", format!("❌ {}", msg));
+            let _ = app.emit("flash-log", "💡 Sugerencias de solución:".to_string());
+            let _ = app.emit("flash-log", "  • Mantén presionado el botón BOOT (IO0) en el ESP32 mientras intenta conectar.".to_string());
+            let _ = app.emit("flash-log", "  • Prueba con otro cable micro-USB (muchos cables solo cargan energía y no transmiten datos).".to_string());
+            let _ = app.emit("flash-log", "  • Asegúrate de haber instalado el driver (CH340 / CP2102) desde la pestaña 'Drivers USB'.".to_string());
+
+            Ok(FlashResult {
+                success: false,
+                message: msg,
+                log,
+                used_baud: baud,
+            })
+        } else {
+            let msg = "✅ ESP32 Saludable: Microcontrolador y Memoria Flash operando al 100%.".to_string();
+            let _ = app.emit("flash-log", "".to_string());
+            let _ = app.emit("flash-log", "✅ ESP32 SALUDABLE: El procesador y la memoria Flash SPI están respondiendo normalmente.".to_string());
+            let _ = app.emit("flash-log", "💡 Si tras flashear el Bluetooth no aparece en tu teléfono celular:".to_string());
+            let _ = app.emit("flash-log", "  • Haz clic en '🧹 Formateo Total (Erase Flash)' para limpiar residuos o datos NVS corruptos.".to_string());
+            let _ = app.emit("flash-log", "  • Asegúrate de que la fuente proporcione al menos 500mA estables (el radio Bluetooth consume picos de corriente).".to_string());
+            let _ = app.emit("flash-log", "  • Pulsa una vez el botón EN (RST) del ESP32 tras el flasheo.".to_string());
+
+            Ok(FlashResult {
+                success: true,
+                message: msg,
+                log,
+                used_baud: baud,
+            })
+        }
+    }
+
+    pub fn erase_flash_esp32(
+        app: &AppHandle,
+        port: &str,
+        baud: u32,
+    ) -> Result<FlashResult, String> {
+        let (esptool_prog, prefix_args) = Self::resolve_esptool(app)?;
+
+        let _ = app.emit("flash-log", "==================================================".to_string());
+        let _ = app.emit("flash-log", format!("🧹 FORMATEO TOTAL / RESCATE ESP32 ({})", port));
+        let _ = app.emit("flash-log", "⏳ Limpiando todas las particiones, código previo y memoria NVS...".to_string());
+        let _ = app.emit("flash-log", format!("⚡ Velocidad UART: {} baudios", baud));
+        let _ = app.emit("flash-log", format!("🚀 Ejecutando esptool: {}", esptool_prog.display()));
+        let _ = app.emit("flash-log", "==================================================".to_string());
+
+        let baud_str = baud.to_string();
+        let erase_args = [
+            "--chip", "esp32",
+            "--port", port,
+            "--baud", &baud_str,
+            "--before", "default-reset",
+            "--after", "hard-reset",
+            "erase-flash",
+        ];
+
+        let (status, log) = Self::execute_esptool(app, &esptool_prog, &prefix_args, &erase_args);
+
+        if status {
+            let msg = "Memoria Flash borrada por completo (100% limpia). ESP32 listo para flasheo limpio.".to_string();
+            let _ = app.emit("flash-log", "".to_string());
+            let _ = app.emit("flash-log", format!("✅ {}", msg));
+            let _ = app.emit("flash-log", "🚀 Ya puedes volver a flashear el firmware del Carro Bluetooth con NVS limpio.".to_string());
+            Ok(FlashResult {
+                success: true,
+                message: msg,
+                log,
+                used_baud: baud,
+            })
+        } else {
+            let msg = format!("Fallo al borrar la memoria flash del ESP32 en {}", port);
+            let _ = app.emit("flash-log", "".to_string());
+            let _ = app.emit("flash-log", format!("❌ {}", msg));
+            let _ = app.emit("flash-log", "💡 Si queda esperando en 'Connecting...', mantén presionado el botón BOOT en el ESP32.".to_string());
             Ok(FlashResult {
                 success: false,
                 message: msg,
@@ -374,38 +523,20 @@ impl FlasherService {
         Err("No se encontró el ejecutable esptool en los recursos de la aplicación ni en el sistema.".to_string())
     }
 
-    fn run_esptool(
+    fn execute_esptool(
         app: &AppHandle,
         esptool_prog: &Path,
         prefix_args: &[String],
-        port: &str,
-        baud: u32,
-        bootloader: &Path,
-        partitions: &Path,
-        boot_app0: &Path,
-        app_bin: &Path,
+        args: &[&str],
     ) -> (bool, String) {
         let mut cmd = Command::new(esptool_prog);
         for arg in prefix_args {
             cmd.arg(arg);
         }
-
-        cmd.arg("--chip").arg("esp32")
-            .arg("--port").arg(port)
-            .arg("--baud").arg(baud.to_string())
-            .arg("--before").arg("default-reset")
-            .arg("--after").arg("hard-reset")
-            .arg("write-flash")
-            .arg("-z")
-            .arg("--flash-mode").arg("dio")
-            .arg("--flash-freq").arg("40m")
-            .arg("--flash-size").arg("detect")
-            .arg("0x1000").arg(bootloader)
-            .arg("0x8000").arg(partitions)
-            .arg("0xe000").arg(boot_app0)
-            .arg("0x10000").arg(app_bin)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
+        for arg in args {
+            cmd.arg(arg);
+        }
+        cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
 
         #[cfg(target_os = "windows")]
         cmd.creation_flags(CREATE_NO_WINDOW);

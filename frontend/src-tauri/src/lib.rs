@@ -139,6 +139,34 @@ fn flash_firmware_esp32(
 }
 
 #[tauri::command]
+fn diagnose_esp32(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    port: String,
+    baud_rate: Option<u32>,
+) -> Result<FlashResult, String> {
+    if state.serial.is_connected() {
+        state.serial.disconnect();
+    }
+    let baud = baud_rate.unwrap_or(115200);
+    FlasherService::diagnose_esp32(&app, &port, baud)
+}
+
+#[tauri::command]
+fn erase_flash_esp32(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    port: String,
+    baud_rate: Option<u32>,
+) -> Result<FlashResult, String> {
+    if state.serial.is_connected() {
+        state.serial.disconnect();
+    }
+    let baud = baud_rate.unwrap_or(115200);
+    FlasherService::erase_flash_esp32(&app, &port, baud)
+}
+
+#[tauri::command]
 fn install_driver(app: AppHandle, driver_type: String) -> Result<bool, String> {
     FlasherService::install_driver(&app, &driver_type)
 }
@@ -187,6 +215,8 @@ pub fn run() {
             backup_database,
             flash_firmware,
             flash_firmware_esp32,
+            diagnose_esp32,
+            erase_flash_esp32,
             install_driver,
         ])
         .run(tauri::generate_context!())

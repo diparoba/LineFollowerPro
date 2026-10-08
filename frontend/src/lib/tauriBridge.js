@@ -1,5 +1,31 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import {
+  isWebSerialSupported,
+  requestWebSerialPort,
+  getGrantedWebSerialPorts,
+  diagnoseEsp32Web,
+  eraseFlashEsp32Web,
+  flashEsp32Web,
+  getActiveWebSerialPort,
+  setActiveWebSerialPort
+} from './esp32WebFlasher.js';
+
+export {
+  isWebSerialSupported,
+  requestWebSerialPort,
+  getGrantedWebSerialPorts,
+  getActiveWebSerialPort,
+  setActiveWebSerialPort
+};
+
+let webFlashLogSubscribers = [];
+
+export function emitWebFlashLog(msg) {
+  for (const sub of webFlashLogSubscribers) {
+    try { sub(msg); } catch (e) { console.error(e); }
+  }
+}
 
 const HTTP_API_URL = 'http://localhost:5000';
 const WS_URL = 'ws://localhost:5000/ws/telemetry';
@@ -19,12 +45,24 @@ export async function getPorts() {
       return { ports: [], connected: false, currentPort: '' };
     }
   } else {
+    const webPorts = [];
+    if (isWebSerialSupported()) {
+      try {
+        const granted = await getGrantedWebSerialPorts();
+        if (granted.length > 0) {
+          webPorts.push('USB Serial (Web Serial Autorizado)');
+        }
+      } catch {}
+    }
     try {
       const res = await fetch(`${HTTP_API_URL}/api/ports`);
-      return await res.json();
+      const data = await res.json();
+      return {
+        ...data,
+        ports: Array.from(new Set([...(data.ports || []), ...webPorts])),
+      };
     } catch (e) {
-      console.warn('Fallback HTTP no disponible:', e);
-      return { ports: [], connected: false, currentPort: '' };
+      return { ports: webPorts, connected: false, currentPort: '' };
     }
   }
 }
@@ -264,12 +302,47 @@ export async function flashFirmware(port, robotType, baudRate = 115200, autoFall
 export async function flashFirmwareEsp32(port, btName, baudRate = 460800) {
   if (isTauri()) {
     return await invoke('flash_firmware_esp32', {
-      port,
+      port: typeof port === 'string' ? port : '',
       btName,
       baudRate: Number(baudRate)
     });
   } else {
-    throw new Error('El flasheo de firmware ESP32 solo está disponible en la versión de escritorio nativa.');
+    return await flashEsp32Web({
+      port: typeof port === 'object' ? port : null,
+      btName,
+      baudRate: Number(baudRate),
+      onLog: emitWebFlashLog,
+    });
+  }
+}
+
+export async function diagnoseEsp32(port, baudRate = 115200) {
+  if (isTauri()) {
+    return await invoke('diagnose_esp32', {
+      port: typeof port === 'string' ? port : '',
+      baudRate: Number(baudRate)
+    });
+  } else {
+    return await diagnoseEsp32Web({
+      port: typeof port === 'object' ? port : null,
+      baudRate: Number(baudRate),
+      onLog: emitWebFlashLog,
+    });
+  }
+}
+
+export async function eraseFlashEsp32(port, baudRate = 115200) {
+  if (isTauri()) {
+    return await invoke('erase_flash_esp32', {
+      port: typeof port === 'string' ? port : '',
+      baudRate: Number(baudRate)
+    });
+  } else {
+    return await eraseFlashEsp32Web({
+      port: typeof port === 'object' ? port : null,
+      baudRate: Number(baudRate),
+      onLog: emitWebFlashLog,
+    });
   }
 }
 
@@ -292,6 +365,8 @@ export async function installDriver(driverType) {
 }
 
 export function subscribeFlashLogs(onLog) {
+  webFlashLogSubscribers.push(onLog);
+
   if (isTauri()) {
     let unlisten = null;
     listen('flash-log', (event) => {
@@ -301,9 +376,12 @@ export function subscribeFlashLogs(onLog) {
     });
 
     return () => {
+      webFlashLogSubscribers = webFlashLogSubscribers.filter(s => s !== onLog);
       if (unlisten) unlisten();
     };
   }
-  return () => {};
+  return () => {
+    webFlashLogSubscribers = webFlashLogSubscribers.filter(s => s !== onLog);
+  };
 }
 
