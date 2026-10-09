@@ -7,6 +7,7 @@ export default defineConfig({
   server: {
     port: 5011,
     host: '0.0.0.0',
+    allowedHosts: ['robotica.ouroboros-software.com', '.ouroboros-software.com', 'localhost', '127.0.0.1'],
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:5010',
@@ -21,6 +22,7 @@ export default defineConfig({
   preview: {
     port: 5011,
     host: '0.0.0.0',
+    allowedHosts: ['robotica.ouroboros-software.com', '.ouroboros-software.com', 'localhost', '127.0.0.1'],
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:5010',
