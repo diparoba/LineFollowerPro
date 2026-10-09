@@ -122,7 +122,7 @@
     } catch (e) {
       statusMessage = isTauri()
         ? 'Error consultando puertos seriales del sistema'
-        : 'Asegúrate de que el backend esté activo en el puerto 5000.';
+        : 'Asegúrate de que el backend esté activo en el puerto 5010.';
     }
   }
 

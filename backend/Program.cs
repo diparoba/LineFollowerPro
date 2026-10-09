@@ -7,8 +7,9 @@ using LineFollower.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configurar puerto por defecto a 5000 si no se especifica
-builder.WebHost.UseUrls("http://0.0.0.0:5000");
+// Configurar puerto por defecto a 5010 si no se especifica
+var serverUrl = Environment.GetEnvironmentVariable("ASPNETCORE_URLS") ?? "http://0.0.0.0:5010";
+builder.WebHost.UseUrls(serverUrl);
 
 // Servicios
 builder.Services.AddSingleton<DatabaseService>();
@@ -206,19 +207,24 @@ app.MapDelete("/api/profiles/{id:int}", (int id, DatabaseService db) =>
 // Fallback para SPA en Svelte
 app.MapFallbackToFile("index.html");
 
-// Auto-abrir navegador en modo portable de escritorio
-_ = Task.Run(async () =>
+// Auto-abrir navegador en modo portable de escritorio (solo local interactivo)
+if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") != "Production" &&
+    Environment.GetEnvironmentVariable("DISABLE_BROWSER_AUTO_OPEN") != "1")
 {
-    await Task.Delay(1200);
-    try
+    _ = Task.Run(async () =>
     {
-        Process.Start(new ProcessStartInfo
+        await Task.Delay(1200);
+        try
         {
-            FileName = "http://localhost:5000",
-            UseShellExecute = true
-        });
-    }
-    catch { }
-});
+            var openUrl = serverUrl.Replace("0.0.0.0", "localhost");
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = openUrl,
+                UseShellExecute = true
+            });
+        }
+        catch { }
+    });
+}
 
 app.Run();

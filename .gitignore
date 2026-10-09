@@ -43,6 +43,7 @@ firmware/.pio/
 **/obj/
 backend/bin/
 backend/obj/
+backend/publish/
 *.user
 *.suo
 *.userosscache

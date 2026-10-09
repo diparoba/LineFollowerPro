@@ -27,8 +27,16 @@ export function emitWebFlashLog(msg) {
   }
 }
 
-const HTTP_API_URL = 'http://localhost:5000';
-const WS_URL = 'ws://localhost:5000/ws/telemetry';
+const isBrowser = typeof window !== 'undefined';
+const HTTP_API_URL = isBrowser ? '' : 'http://localhost:5010';
+const getWsUrl = () => {
+  if (isBrowser) {
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${proto}//${window.location.host}/ws/telemetry`;
+  }
+  return 'ws://localhost:5010/ws/telemetry';
+};
+const WS_URL = isBrowser ? getWsUrl() : 'ws://localhost:5010/ws/telemetry';
 
 export function isTauri() {
   return typeof window !== 'undefined' && 
@@ -257,7 +265,7 @@ export function subscribeTelemetry(onTelemetry, onLog) {
     let timer = null;
 
     function connectWs() {
-      ws = new WebSocket(WS_URL);
+      ws = new WebSocket(getWsUrl());
       ws.onmessage = (e) => {
         try {
           const msg = JSON.parse(e.data);
