@@ -7,8 +7,8 @@ Proporciona la suite de firmware y flasheo para microcontroladores ESP32 DevKit 
 
 ### Requirement: ESP32 Bluetooth Classic Car Firmware and Motor Control
 The ESP32 firmware SHALL implement Bluetooth Classic SPP communication using `BluetoothSerial` and control a dual H-bridge motor driver (TB6612FNG) using the assigned GPIO pins and configurable motor direction polarity constants:
-- Motor A (Izquierdo): PWMA en GPIO 32 con modulación LEDC a 20 kHz ultrasónico (8 bits, 0-255), AIN1 en GPIO 25 y AIN2 en GPIO 33.
-- Motor B (Derecho): PWMB en GPIO 18 con modulación LEDC a 20 kHz ultrasónico (8 bits, 0-255), BIN1 en GPIO 19 y BIN2 en GPIO 27.
+- Motor A (Izquierdo): PWMA en GPIO 32 con modulación LEDC a 1 kHz (8 bits, 0-255), AIN1 en GPIO 25 y AIN2 en GPIO 33.
+- Motor B (Derecho): PWMB en GPIO 18 con modulación LEDC a 1 kHz (8 bits, 0-255), BIN1 en GPIO 19 y BIN2 en GPIO 27.
 - Standby (STBY): GPIO 26 configurado en nivel lógico `HIGH` durante la operación para habilitar el puente H.
 - Polarity Configuration: The firmware SHALL define `INVERT_MOTOR_A` and `INVERT_MOTOR_B` constants. When set to `true`, the directional pin states for forward (`speed > 0`) and reverse (`speed < 0`) SHALL be inverted so that physical rotation matches forward vehicle movement without rewiring.
 
@@ -21,8 +21,9 @@ The firmware SHALL parse single-character movement commands from Bluetooth:
 - `'I'`: Marcha adelante + derecha.
 - `'H'`: Marcha atrás + izquierda.
 - `'J'`: Marcha atrás + derecha.
-- `'S'`: Parada inmediata (ambos PWM en 0 y salidas de dirección en LOW).
-- `'0'` a `'9'`, `'q'`: Ajuste de nivel de velocidad de 0% a 100% de ciclo de trabajo PWM.
+- `'S'`, `'D'`: Parada inmediata (ambos PWM en 0 y salidas de dirección en LOW).
+- `'0'` a `'9'`: Ajuste lineal de velocidad de 0% a 100% de ciclo de trabajo PWM mediante la fórmula `(cmd - '0') * 255 / 9`.
+- `'q'`, `'Q'`: Respaldo para velocidad máxima (100% PWM / 255).
 
 #### Scenario: Forward motion command received
 - **WHEN** the car is connected over Bluetooth Classic and receives the character `'F'`
@@ -35,6 +36,10 @@ The firmware SHALL parse single-character movement commands from Bluetooth:
 #### Scenario: Stop command received
 - **WHEN** the car receives the character `'S'` or loses Bluetooth connection
 - **THEN** both motor PWM channels are immediately set to 0 duty cycle
+
+#### Scenario: Universal speed command received
+- **WHEN** the car receives character `'9'`
+- **THEN** current speed is set to 255 (100% PWM duty cycle), and when receiving `'0'` it is set to 0 (0% duty cycle)
 
 ### Requirement: Dynamic Bluetooth Device Name Configuration
 The system SHALL provide an input in the user interface to specify the Bluetooth broadcast name prior to flashing. The name MUST be between 1 and 31 ASCII characters. The backend SHALL replace the placeholder signature inside the precompiled firmware template binary with the sanitized custom name (null-terminated and zero-padded) before flashing to the target ESP32.
@@ -70,3 +75,10 @@ The system SHALL display a dedicated `🚗 Carro BT ESP32` tab inside the `Hardw
 #### Scenario: Accessing the ESP32 Car Tab
 - **WHEN** the user opens the Hardware Suite and clicks on the "Carro BT ESP32" tab
 - **THEN** the dedicated ESP32 configuration form, wiring schematic, and flasher console are displayed
+
+### Requirement: ESP32 DevKit V1 BLE 4.2 Support and Visual Activity Feedback
+The system SHALL provide an alternative firmware option for ESP32 DevKit V1 based on Bluetooth Low Energy (BLE 4.2) using the Nordic UART Service (NUS) GATT profile for direct connection from iOS (iPhone/iPad) and Android without system pairing, toggling the onboard LED on GPIO 2 as visual confirmation of received commands.
+
+#### Scenario: BLE connection and control on ESP32 DevKit V1
+- **WHEN** a client device connects over BLE 4.2 and sends movement or speed commands
+- **THEN** the firmware parses the command, drives the TB6612FNG driver, and pulses the onboard LED on GPIO 2

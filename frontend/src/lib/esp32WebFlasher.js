@@ -253,9 +253,17 @@ export async function eraseFlashEsp32Web({ port = null, baudRate = 115200, onLog
 }
 
 /**
- * Flasheo del Firmware Carro Bluetooth directamente desde la Web mediante Web Serial API.
+ * Flasheo del Firmware Carro Bluetooth / BLE directamente desde la Web mediante Web Serial API.
  */
-export async function flashEsp32Web({ port = null, btName = 'Carro_BT_ESP32', baudRate = 460800, onLog = console.log } = {}) {
+export async function flashEsp32Web({
+  port = null,
+  btName = 'Carro_BT_ESP32',
+  baudRate = 460800,
+  boardModel = 'esp32',
+  onLog = console.log
+} = {}) {
+  const isS3 = boardModel === 'esp32_s3' || boardModel === 'esp32s3';
+  const isBleClassic = boardModel === 'esp32_ble';
   const cleanName = btName.trim();
   if (!cleanName) {
     throw new Error('El nombre Bluetooth no puede estar vacío.');
@@ -267,28 +275,47 @@ export async function flashEsp32Web({ port = null, btName = 'Carro_BT_ESP32', ba
     targetPort = await requestWebSerialPort();
   }
 
+  let modelTitle = 'ESP32 CLÁSICO (BT SPP)';
+  let firmwareFolder = '/firmwares/esp32';
+  let firmwareBinName = 'firmware_esp32_bt.bin';
+
+  if (isS3) {
+    modelTitle = 'ESP32-S3 (BLE 5.0 + NeoPixel GPIO 48)';
+    firmwareFolder = '/firmwares/esp32_s3';
+    firmwareBinName = 'firmware_esp32_s3_ble.bin';
+  } else if (isBleClassic) {
+    modelTitle = 'ESP32 CLÁSICO DEVKIT V1 (BLE 4.2 • iOS)';
+    firmwareFolder = '/firmwares/esp32_ble';
+    firmwareBinName = 'firmware_esp32_ble.bin';
+  }
+
   onLog('==================================================');
-  onLog('🚀 INICIANDO FLASHEO CARRO BLUETOOTH ESP32 (WEB SERIAL)');
-  onLog(`📡 Nombre Bluetooth: "${cleanName}"`);
+  onLog(`🚀 INICIANDO FLASHEO ${modelTitle} (WEB SERIAL)`);
+  onLog(`📡 Nombre Dispositivo: "${cleanName}"`);
   onLog(`⚡ Velocidad UART: ${baudRate} baudios`);
+  if (isS3) {
+    onLog('💡 Indicador visual: LED NeoPixel en GPIO 48 se activará con cada instrucción BLE recibida.');
+  } else if (isBleClassic) {
+    onLog('💡 Indicador visual: LED azul integrado en GPIO 2 destellará con cada instrucción BLE 4.2 recibida.');
+  }
   onLog('==================================================');
 
-  onLog('📥 Descargando binarios de firmware desde el servidor web...');
+  onLog(`📥 Descargando binarios de firmware desde '${firmwareFolder}'...`);
   const [bootloaderBuf, partitionsBuf, bootApp0Buf, firmwareBuf] = await Promise.all([
-    fetch('/firmwares/esp32/bootloader.bin').then(r => {
-      if (!r.ok) throw new Error('No se pudo descargar bootloader.bin');
+    fetch(`${firmwareFolder}/bootloader.bin`).then(r => {
+      if (!r.ok) throw new Error(`No se pudo descargar bootloader.bin desde ${firmwareFolder}`);
       return r.arrayBuffer();
     }),
-    fetch('/firmwares/esp32/partitions.bin').then(r => {
-      if (!r.ok) throw new Error('No se pudo descargar partitions.bin');
+    fetch(`${firmwareFolder}/partitions.bin`).then(r => {
+      if (!r.ok) throw new Error(`No se pudo descargar partitions.bin desde ${firmwareFolder}`);
       return r.arrayBuffer();
     }),
-    fetch('/firmwares/esp32/boot_app0.bin').then(r => {
-      if (!r.ok) throw new Error('No se pudo descargar boot_app0.bin');
+    fetch(`${firmwareFolder}/boot_app0.bin`).then(r => {
+      if (!r.ok) throw new Error(`No se pudo descargar boot_app0.bin desde ${firmwareFolder}`);
       return r.arrayBuffer();
     }),
-    fetch('/firmwares/esp32/firmware_esp32_bt.bin').then(r => {
-      if (!r.ok) throw new Error('No se pudo descargar firmware_esp32_bt.bin');
+    fetch(`${firmwareFolder}/${firmwareBinName}`).then(r => {
+      if (!r.ok) throw new Error(`No se pudo descargar ${firmwareBinName} desde ${firmwareFolder}`);
       return r.arrayBuffer();
     }),
   ]);
@@ -311,19 +338,25 @@ export async function flashEsp32Web({ port = null, btName = 'Carro_BT_ESP32', ba
   });
 
   try {
-    onLog('🔌 Conectando con el ESP32...');
-    await loader.main();
+    onLog('🔌 Conectando con el microcontrolador...');
+    const chipRom = await loader.main();
+    onLog(`✅ Procesador detectado: ${chipRom}`);
+
+    // Offsets de memoria flash según el modelo:
+    // ESP32 clásico: bootloader en 0x1000
+    // ESP32-S3: bootloader en 0x0000
+    const bootloaderOffset = isS3 ? 0x0000 : 0x1000;
 
     onLog('📦 Escribiendo particiones y firmware en memoria Flash...');
     await loader.writeFlash({
       fileArray: [
-        { data: new Uint8Array(bootloaderBuf), address: 0x1000 },
+        { data: new Uint8Array(bootloaderBuf), address: bootloaderOffset },
         { data: new Uint8Array(partitionsBuf), address: 0x8000 },
         { data: new Uint8Array(bootApp0Buf), address: 0xe000 },
         { data: patchedFirmware, address: 0x10000 },
       ],
       flashMode: 'dio',
-      flashFreq: '40m',
+      flashFreq: isS3 ? '80m' : '40m',
       flashSize: 'detect',
       eraseAll: false,
       compress: true,
@@ -333,25 +366,35 @@ export async function flashEsp32Web({ port = null, btName = 'Carro_BT_ESP32', ba
       },
     });
 
+    let completeDeviceName = 'ESP32 BT Classic';
+    if (isS3) completeDeviceName = 'ESP32-S3 BLE 5.0';
+    else if (isBleClassic) completeDeviceName = 'ESP32 BLE 4.2';
+
     onLog('');
-    onLog(`✅ Firmware Carro Bluetooth subido con éxito al ESP32 con nombre '${cleanName}'!`);
-    onLog('💡 Si el Bluetooth no aparece de inmediato en tu celular, pulsa una vez el botón EN (RST) del ESP32.');
+    onLog(`✅ Firmware Carro ${completeDeviceName} subido con éxito con nombre '${cleanName}'!`);
+    if (isS3) {
+      onLog('✨ El LED NeoPixel en GPIO 48 parpadeará en color azul buscando conexión BLE y cambiará a verde/colores vivos al recibir comandos.');
+    } else if (isBleClassic) {
+      onLog('✨ El LED azul en GPIO 2 parpadeará indicando modo visible BLE 4.2 y destellará al recibir comandos (Compatible con iPhone/iOS).');
+    } else {
+      onLog('💡 Si el Bluetooth no aparece de inmediato en tu celular, pulsa una vez el botón EN (RST) del ESP32.');
+    }
 
     await loader.after('hard_reset').catch(() => {});
     await transport.disconnect().catch(() => {});
 
     return {
       success: true,
-      message: `Firmware Carro Bluetooth subido con éxito al ESP32 con nombre '${cleanName}'.`,
+      message: `Firmware Carro ${completeDeviceName} subido con éxito con nombre '${cleanName}'.`,
     };
   } catch (err) {
     await transport.disconnect().catch(() => {});
     onLog('');
     onLog(`❌ Error durante el flasheo: ${err.message || err}`);
-    onLog('💡 Si queda en "Connecting...", mantén pulsado el botón BOOT en el ESP32.');
+    onLog('💡 Si queda en "Connecting...", mantén pulsado el botón BOOT en el microcontrolador.');
     return {
       success: false,
-      message: `Fallo en el flasheo del ESP32: ${err.message || err}`,
+      message: `Fallo en el flasheo del microcontrolador: ${err.message || err}`,
     };
   }
 }

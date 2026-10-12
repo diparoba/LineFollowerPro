@@ -303,22 +303,50 @@ export async function flashFirmware(port, robotType, baudRate = 115200, autoFall
       autoFallback: Boolean(autoFallback)
     });
   } else {
-    throw new Error('El flasheo de firmware solo está disponible en la versión de escritorio nativa.');
+    ensureSharedWs();
+    const res = await fetch(`${HTTP_API_URL}/api/firmware/flash`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        port,
+        robotType,
+        baudRate: Number(baudRate),
+        autoFallback: Boolean(autoFallback)
+      })
+    });
+    if (!res.ok) {
+      let errMsg = `Error ${res.status}: Fallo en el servidor de flasheo`;
+      try {
+        const errJson = await res.json();
+        if (errJson?.message) errMsg = errJson.message;
+      } catch {}
+      throw new Error(errMsg);
+    }
+    const data = await res.json();
+    if (data.log) {
+      const lines = data.log.split('\n');
+      for (const line of lines) {
+        if (line.trim()) emitWebFlashLog(line);
+      }
+    }
+    return data;
   }
 }
 
-export async function flashFirmwareEsp32(port, btName, baudRate = 460800) {
+export async function flashFirmwareEsp32(port, btName, baudRate = 460800, boardModel = 'esp32') {
   if (isTauri()) {
     return await invoke('flash_firmware_esp32', {
       port: typeof port === 'string' ? port : '',
       btName,
-      baudRate: Number(baudRate)
+      baudRate: Number(baudRate),
+      boardModel
     });
   } else {
     return await flashEsp32Web({
       port: typeof port === 'object' ? port : null,
       btName,
       baudRate: Number(baudRate),
+      boardModel,
       onLog: emitWebFlashLog,
     });
   }
@@ -372,8 +400,39 @@ export async function installDriver(driverType) {
   }
 }
 
+let sharedWs = null;
+let sharedWsTimer = null;
+
+function ensureSharedWs() {
+  if (isTauri() || !isBrowser) return;
+  if (sharedWs && (sharedWs.readyState === WebSocket.OPEN || sharedWs.readyState === WebSocket.CONNECTING)) {
+    return;
+  }
+  try {
+    sharedWs = new WebSocket(getWsUrl());
+    sharedWs.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'log' && msg.message) {
+          emitWebFlashLog(msg.message);
+        }
+      } catch (err) {}
+    };
+    sharedWs.onclose = () => {
+      sharedWs = null;
+      if (webFlashLogSubscribers.length > 0) {
+        sharedWsTimer = setTimeout(ensureSharedWs, 2000);
+      }
+    };
+    sharedWs.onerror = () => {
+      sharedWs?.close();
+    };
+  } catch (err) {}
+}
+
 export function subscribeFlashLogs(onLog) {
   webFlashLogSubscribers.push(onLog);
+  ensureSharedWs();
 
   if (isTauri()) {
     let unlisten = null;

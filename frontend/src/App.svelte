@@ -616,9 +616,11 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.45rem 0.85rem;
+    padding: 0.5rem 0.85rem;
     flex-wrap: wrap;
     gap: 0.65rem;
+    flex-shrink: 0;
+    min-height: 48px;
   }
 
   .header-left {

@@ -38,8 +38,8 @@
   <div class="serial-section">
     <div class="com-select-group">
       <label for="comPort">COM:</label>
-      <select id="comPort" bind:value={selectedPort} disabled={isConnected}>
-        <option value="">-- Puerto --</option>
+      <select id="comPort" class="com-select precision-mono" bind:value={selectedPort} disabled={isConnected}>
+        <option value="">-- Seleccionar Puerto --</option>
         {#each ports as p}
           <option value={p}>{p}</option>
         {/each}
@@ -47,7 +47,7 @@
       <button class="precision-btn btn-icon" on:click={handleRefreshPorts} title="Actualizar puertos COM" disabled={isConnected}>
         🔄
       </button>
-      <select id="baudRate" bind:value={selectedBaud} disabled={isConnected} class="baud-select" title="Velocidad en baudios (USB o Bluetooth HC-05)">
+      <select id="baudRate" bind:value={selectedBaud} disabled={isConnected} class="baud-select precision-mono" title="Velocidad en baudios (USB o Bluetooth HC-05)">
         <option value={115200}>115200</option>
         <option value={9600}>9600 (HC-05)</option>
       </select>
@@ -57,7 +57,7 @@
       class="precision-btn {isConnected ? 'btn-disconnect' : 'btn-connect'}" 
       on:click={handleConnect}
     >
-      {isConnected ? 'Desconectar' : 'Conectar Serial'}
+      <span>{isConnected ? '🔌 Desconectar' : '🔌 Conectar Serial'}</span>
     </button>
   </div>
 
@@ -118,42 +118,68 @@
 
 <style>
   .control-bar {
-    padding: 0.55rem 0.85rem;
+    padding: 0.65rem 0.95rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 0.65rem;
+    gap: 0.75rem;
     margin-bottom: 0.75rem;
+    flex-shrink: 0;
+    min-height: 52px;
   }
 
   .serial-section {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.65rem;
     flex-wrap: wrap;
   }
 
   .com-select-group {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    font-size: 0.78rem;
-    font-weight: 600;
+    gap: 0.45rem;
+    font-size: 0.85rem;
+    font-weight: 700;
     color: var(--text-secondary);
+  }
+
+  .com-select, .baud-select {
+    height: 36px;
+    font-size: 0.85rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: var(--radius-btn);
+    background: var(--bg-input);
+    border: 1px solid var(--border-medium);
+    color: var(--text-primary);
+    box-sizing: border-box;
+  }
+
+  .com-select {
+    min-width: 155px;
+    font-weight: 600;
   }
 
   .robot-actions {
     display: flex;
     gap: 0.45rem;
     flex-wrap: wrap;
+    align-items: center;
   }
 
   .btn-icon {
     background: var(--bg-card);
-    border: 1px solid var(--border-subtle);
+    border: 1px solid var(--border-medium);
     color: var(--text-secondary);
-    padding: 0.35rem 0.5rem;
+    height: 36px;
+    width: 36px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    border-radius: var(--radius-btn);
     transition: all 0.15s ease;
   }
 
@@ -167,7 +193,10 @@
     background: #0284c7;
     color: #ffffff;
     font-weight: 700;
-    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35);
+    height: 36px;
+    padding: 0 1.15rem;
+    font-size: 0.85rem;
+    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.4);
   }
 
   .btn-connect:hover {
@@ -178,12 +207,18 @@
     background: #e11d48;
     color: #ffffff;
     font-weight: 700;
+    height: 36px;
+    padding: 0 1.15rem;
+    font-size: 0.85rem;
   }
 
   .btn-sim {
     background: #7c3aed;
     color: #ffffff;
     font-weight: 700;
+    height: 36px;
+    padding: 0 0.85rem;
+    font-size: 0.82rem;
     box-shadow: 0 2px 8px rgba(124, 58, 237, 0.35);
   }
 
@@ -195,6 +230,9 @@
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     color: var(--text-primary);
+    height: 36px;
+    padding: 0 0.8rem;
+    font-size: 0.82rem;
     transition: all 0.15s ease;
   }
 
@@ -207,6 +245,9 @@
     background: #059669;
     color: #ffffff;
     font-weight: 700;
+    height: 36px;
+    padding: 0 0.95rem;
+    font-size: 0.82rem;
     box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3);
   }
 
@@ -218,6 +259,9 @@
     background: #e11d48;
     color: #ffffff;
     font-weight: 700;
+    height: 36px;
+    padding: 0 0.95rem;
+    font-size: 0.82rem;
     box-shadow: 0 2px 6px rgba(225, 29, 72, 0.3);
   }
 
@@ -226,11 +270,12 @@
   }
 
   .status-banner {
+    flex-shrink: 0;
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     border-left: 3px solid var(--accent-cyan);
     border-radius: var(--radius-btn);
-    padding: 0.35rem 0.65rem;
+    padding: 0.45rem 0.75rem;
     margin-bottom: 0.75rem;
     display: flex;
     align-items: center;
@@ -241,11 +286,24 @@
     background: var(--chip-blue-bg);
     color: var(--chip-blue-text);
     border: 1px solid var(--chip-blue-border);
-    font-size: 0.62rem;
+    font-size: 0.65rem;
+    font-weight: 700;
   }
 
   .status-text {
-    font-size: 0.75rem;
+    font-size: 0.78rem;
     color: var(--text-secondary);
+  }
+
+  @media (max-width: 1200px) {
+    .control-bar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.6rem;
+    }
+    .serial-section, .robot-actions {
+      width: 100%;
+      justify-content: flex-start;
+    }
   }
 </style>

@@ -142,6 +142,128 @@ app.MapPost("/api/disconnect", (SerialService serial) =>
     return Results.Ok(new { success = true });
 });
 
+app.MapPost("/api/firmware/flash", async (FlashFirmwareRequest req, SerialService serial) =>
+{
+    if (string.IsNullOrWhiteSpace(req.Port))
+    {
+        return Results.BadRequest(new FlashFirmwareResult
+        {
+            Success = false,
+            Message = "Debe especificar un puerto COM válido.",
+            Log = "Error: Puerto COM vacío.",
+            UsedBaud = req.BaudRate
+        });
+    }
+
+    var avrdudeExe = FindAvrdudeExe();
+    if (avrdudeExe == null)
+    {
+        return Results.BadRequest(new FlashFirmwareResult
+        {
+            Success = false,
+            Message = "No se encontró el ejecutable avrdude.exe en los recursos del backend.",
+            Log = "Error: avrdude.exe no encontrado.",
+            UsedBaud = req.BaudRate
+        });
+    }
+
+    var avrdudeConf = FindAvrdudeConf();
+    if (avrdudeConf == null)
+    {
+        return Results.BadRequest(new FlashFirmwareResult
+        {
+            Success = false,
+            Message = "No se encontró avrdude.conf en los recursos del backend.",
+            Log = "Error: avrdude.conf no encontrado.",
+            UsedBaud = req.BaudRate
+        });
+    }
+
+    var hexFile = FindHexFile(req.RobotType);
+    if (hexFile == null)
+    {
+        return Results.BadRequest(new FlashFirmwareResult
+        {
+            Success = false,
+            Message = $"No se encontró el archivo hexadecimal para {req.RobotType}.",
+            Log = $"Error: Firmware hex no encontrado para {req.RobotType}.",
+            UsedBaud = req.BaudRate
+        });
+    }
+
+    // Desconectar SerialService preventivamente para liberar el puerto COM
+    if (serial.IsConnected)
+    {
+        serial.EmitLog($"[AVRDUDE] Liberando conexión serial previa en {serial.CurrentPort}...");
+        serial.Disconnect();
+        await Task.Delay(400);
+    }
+
+    serial.EmitLog($"🔧 Preparando flasheo para: {req.RobotType}");
+    serial.EmitLog($"📁 Firmware: {hexFile}");
+    serial.EmitLog($"🔌 Puerto: {req.Port} @ {req.BaudRate} baudios");
+
+    var attempt1 = await RunAvrdudeAsync(avrdudeExe, avrdudeConf, hexFile, req.Port, req.BaudRate, serial);
+
+    if (attempt1.Success)
+    {
+        var msg = $"Firmware {req.RobotType} subido con éxito al robot a {req.BaudRate} baudios";
+        serial.EmitLog($"✅ {msg}");
+        return Results.Ok(new FlashFirmwareResult
+        {
+            Success = true,
+            Message = msg,
+            Log = attempt1.Log,
+            UsedBaud = req.BaudRate
+        });
+    }
+
+    // Si falló y autoFallback está activo y estábamos en 115200, probamos 57600 (Old Bootloader)
+    if (req.AutoFallback && req.BaudRate == 115200)
+    {
+        int fallbackBaud = 57600;
+        serial.EmitLog("⚠️ Falló a 115200 baudios. Activando Auto-Fallback a 57600 baudios (Old Bootloader)...");
+        await Task.Delay(500);
+
+        var attempt2 = await RunAvrdudeAsync(avrdudeExe, avrdudeConf, hexFile, req.Port, fallbackBaud, serial);
+        var combinedLog = $"--- Intento 115200 ---\n{attempt1.Log}\n--- Intento Fallback 57600 ---\n{attempt2.Log}";
+
+        if (attempt2.Success)
+        {
+            var msg = $"Firmware {req.RobotType} subido con éxito (Auto-Fallback: Old Bootloader @ 57600 baudios)";
+            serial.EmitLog($"✅ {msg}");
+            return Results.Ok(new FlashFirmwareResult
+            {
+                Success = true,
+                Message = msg,
+                Log = combinedLog,
+                UsedBaud = fallbackBaud
+            });
+        }
+        else
+        {
+            var msg = "Fallo en flasheo: no respondió ni a 115200 ni a 57600 baudios";
+            serial.EmitLog($"❌ {msg}");
+            return Results.Ok(new FlashFirmwareResult
+            {
+                Success = false,
+                Message = msg,
+                Log = combinedLog,
+                UsedBaud = fallbackBaud
+            });
+        }
+    }
+
+    serial.EmitLog($"❌ Error de flasheo a {req.BaudRate} baudios");
+    return Results.Ok(new FlashFirmwareResult
+    {
+        Success = false,
+        Message = $"Error de flasheo a {req.BaudRate} baudios",
+        Log = attempt1.Log,
+        UsedBaud = req.BaudRate
+    });
+});
+
 app.MapPost("/api/pid", (RobotProfile profile, SerialService serial) =>
 {
     var ok = serial.SendPid(
@@ -228,3 +350,106 @@ if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") != "Production"
 }
 
 app.Run();
+
+// Métodos estáticos de soporte para flasheo con avrdude
+static async Task<(bool Success, string Log)> RunAvrdudeAsync(
+    string avrdudeExe,
+    string avrdudeConf,
+    string hexFile,
+    string port,
+    int baud,
+    SerialService serial)
+{
+    var logBuilder = new StringBuilder();
+    var flashArg = $"flash:w:\"{hexFile}\":i";
+
+    var psi = new ProcessStartInfo
+    {
+        FileName = avrdudeExe,
+        Arguments = $"-C \"{avrdudeConf}\" -v -p atmega328p -c arduino -P {port} -b {baud} -D -U {flashArg}",
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        UseShellExecute = false,
+        CreateNoWindow = true
+    };
+
+    try
+    {
+        using var process = new Process { StartInfo = psi };
+        process.OutputDataReceived += (s, e) =>
+        {
+            if (!string.IsNullOrEmpty(e.Data))
+            {
+                lock (logBuilder)
+                {
+                    logBuilder.AppendLine(e.Data);
+                }
+                serial.EmitLog(e.Data);
+            }
+        };
+        process.ErrorDataReceived += (s, e) =>
+        {
+            if (!string.IsNullOrEmpty(e.Data))
+            {
+                lock (logBuilder)
+                {
+                    logBuilder.AppendLine(e.Data);
+                }
+                serial.EmitLog(e.Data);
+            }
+        };
+
+        process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+
+        await process.WaitForExitAsync();
+        return (process.ExitCode == 0, logBuilder.ToString());
+    }
+    catch (Exception ex)
+    {
+        var err = $"Error ejecutando avrdude: {ex.Message}";
+        serial.EmitLog(err);
+        return (false, err);
+    }
+}
+
+static string? FindAvrdudeExe()
+{
+    var candidates = new[]
+    {
+        Path.Combine(AppContext.BaseDirectory, "resources", "avrdude", "avrdude.exe"),
+        Path.Combine(Directory.GetCurrentDirectory(), "resources", "avrdude", "avrdude.exe"),
+        Path.Combine(Directory.GetCurrentDirectory(), "backend", "resources", "avrdude", "avrdude.exe"),
+        Path.Combine(Directory.GetCurrentDirectory(), "frontend", "src-tauri", "resources", "avrdude", "avrdude.exe")
+    };
+    return candidates.FirstOrDefault(File.Exists);
+}
+
+static string? FindAvrdudeConf()
+{
+    var candidates = new[]
+    {
+        Path.Combine(AppContext.BaseDirectory, "resources", "avrdude", "avrdude.conf"),
+        Path.Combine(Directory.GetCurrentDirectory(), "resources", "avrdude", "avrdude.conf"),
+        Path.Combine(Directory.GetCurrentDirectory(), "backend", "resources", "avrdude", "avrdude.conf"),
+        Path.Combine(Directory.GetCurrentDirectory(), "frontend", "src-tauri", "resources", "avrdude", "avrdude.conf")
+    };
+    return candidates.FirstOrDefault(File.Exists);
+}
+
+static string? FindHexFile(string robotType)
+{
+    string hexName = (robotType.Contains("8", StringComparison.OrdinalIgnoreCase) || robotType.Equals("CODEX_8", StringComparison.OrdinalIgnoreCase))
+        ? "firmware_codex8.hex"
+        : "firmware_im16.hex";
+
+    var candidates = new[]
+    {
+        Path.Combine(AppContext.BaseDirectory, "wwwroot", "firmwares", hexName),
+        Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "firmwares", hexName),
+        Path.Combine(Directory.GetCurrentDirectory(), "backend", "wwwroot", "firmwares", hexName),
+        Path.Combine(Directory.GetCurrentDirectory(), "frontend", "public", "firmwares", hexName)
+    };
+    return candidates.FirstOrDefault(File.Exists);
+}

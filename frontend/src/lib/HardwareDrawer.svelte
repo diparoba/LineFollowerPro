@@ -36,6 +36,7 @@
 
   // ESP32 Car & Rescue state
   let hasWebSerial = isWebSerialSupported();
+  let esp32Model = 'esp32'; // 'esp32' | 'esp32_ble' | 'esp32_s3'
   let esp32Port = currentPort || '';
   let esp32BtName = 'Carro_BT_ESP32';
   let esp32Baud = 460800;
@@ -43,6 +44,23 @@
   let isDiagnosingEsp32 = false;
   let isErasingFlashEsp32 = false;
   let esp32FlashStatus = { type: '', message: '' };
+
+  function setEsp32Model(model) {
+    esp32Model = model;
+    if (model === 'esp32_s3') {
+      if (esp32BtName === 'Carro_BT_ESP32' || esp32BtName === 'Carro_BLE_ESP32') {
+        esp32BtName = 'Carro_S3_BLE';
+      }
+    } else if (model === 'esp32_ble') {
+      if (esp32BtName === 'Carro_BT_ESP32' || esp32BtName === 'Carro_S3_BLE') {
+        esp32BtName = 'Carro_BLE_ESP32';
+      }
+    } else {
+      if (esp32BtName === 'Carro_S3_BLE' || esp32BtName === 'Carro_BLE_ESP32') {
+        esp32BtName = 'Carro_BT_ESP32';
+      }
+    }
+  }
 
   $: isEsp32Busy = isFlashingEsp32 || isDiagnosingEsp32 || isErasingFlashEsp32;
 
@@ -240,14 +258,23 @@
       return;
     }
 
+    const isS3 = esp32Model === 'esp32_s3';
+    const isBleClassic = esp32Model === 'esp32_ble';
     isFlashingEsp32 = true;
-    esp32FlashStatus = { type: 'info', message: 'Iniciando subida de software a ESP32 DevKit V1...' };
+    esp32FlashStatus = {
+      type: 'info',
+      message: isS3
+        ? 'Iniciando subida de software a ESP32-S3 DevKit 2022 v1.3 (BLE 5.0)...'
+        : isBleClassic
+          ? 'Iniciando subida de software a ESP32 DevKit V1 (BLE 4.2 • iOS)...'
+          : 'Iniciando subida de software a ESP32 DevKit V1 (Bluetooth Classic)...'
+    };
     flashLogs = [
-      `[${new Date().toLocaleTimeString()}] Iniciando flasheo ESP32 Carro BT en ${esp32Port || 'Web Serial'} (Nombre: "${cleanName}")...`
+      `[${new Date().toLocaleTimeString()}] Iniciando flasheo ${isS3 ? 'ESP32-S3 BLE' : isBleClassic ? 'ESP32 DevKit V1 BLE 4.2' : 'ESP32 Carro BT'} en ${esp32Port || 'Web Serial'} (Nombre: "${cleanName}")...`
     ];
 
     try {
-      const res = await flashFirmwareEsp32(esp32Port, cleanName, esp32Baud);
+      const res = await flashFirmwareEsp32(esp32Port, cleanName, esp32Baud, esp32Model);
       if (res.success) {
         esp32FlashStatus = { type: 'success', message: res.message };
       } else {
@@ -666,14 +693,74 @@
 
       {#if activeTab === 'esp32'}
         <div class="tab-pane">
+          <!-- Model Selector Bar -->
+          <div class="model-selector-bar">
+            <button
+              type="button"
+              class="model-choice-btn {esp32Model === 'esp32' ? 'active' : ''}"
+              on:click={() => setEsp32Model('esp32')}
+              disabled={isEsp32Busy}
+            >
+              <span class="choice-icon">🚗</span>
+              <div class="choice-text">
+                <strong>ESP32 Clásico DevKit V1</strong>
+                <span class="choice-sub">Bluetooth SPP • Android / PC</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="model-choice-btn {esp32Model === 'esp32_ble' ? 'active' : ''}"
+              on:click={() => setEsp32Model('esp32_ble')}
+              disabled={isEsp32Busy}
+            >
+              <span class="choice-icon">📱</span>
+              <div class="choice-text">
+                <strong>ESP32 Clásico DevKit V1</strong>
+                <span class="choice-sub">BLE 4.2 • iOS / iPhone • LED GPIO 2</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="model-choice-btn {esp32Model === 'esp32_s3' ? 'active' : ''}"
+              on:click={() => setEsp32Model('esp32_s3')}
+              disabled={isEsp32Busy}
+            >
+              <span class="choice-icon">⚡</span>
+              <div class="choice-text">
+                <strong>ESP32-S3 DevKit 2022 v1.3</strong>
+                <span class="choice-sub">BLE 5.0 • NeoPixel RGB en GPIO 48</span>
+              </div>
+            </button>
+          </div>
+
           <!-- Overview Card -->
           <div class="section-card">
             <div class="card-header-row">
-              <h3>🚗 Carro Robótico Bluetooth Classic</h3>
-              <span class="badge-chip">ESP32 DevKit V1</span>
+              <h3>
+                {esp32Model === 'esp32_s3'
+                  ? '⚡ Carro Robótico ESP32-S3 (BLE 5.0)'
+                  : esp32Model === 'esp32_ble'
+                    ? '📱 Carro Robótico ESP32 Clásico (BLE 4.2 • iOS)'
+                    : '🚗 Carro Robótico Bluetooth Classic'}
+              </h3>
+              <span class="badge-chip">
+                {esp32Model === 'esp32_s3'
+                  ? 'ESP32-S3 DevKit 2022 v1.3'
+                  : esp32Model === 'esp32_ble'
+                    ? 'ESP32 DevKit V1 (BLE 4.2)'
+                    : 'ESP32 DevKit V1'}
+              </span>
             </div>
             <p class="section-desc">
-              Control inalámbrico para carros RC con puente H <strong>TB6612FNG</strong>. El firmware utiliza <strong>Bluetooth Classic (SPP)</strong> para vincularse directamente con aplicaciones móviles universales sin requerir BLE ni apps especiales.
+              {#if esp32Model === 'esp32_s3'}
+                Control inalámbrico para carros RC mediante <strong>Bluetooth Low Energy (BLE 5.0 Nordic UART)</strong> y puente H <strong>TB6612FNG</strong>. Incluye retroalimentación interactiva en vivo mediante el <strong>LED RGB NeoPixel integrado en GPIO 48</strong>, el cual parpadea para confirmar que está recibiendo todas las instrucciones de movimiento y velocidad por Bluetooth.
+              {:else if esp32Model === 'esp32_ble'}
+                Control inalámbrico para carros RC mediante <strong>Bluetooth Low Energy (BLE 4.2 Nordic UART)</strong> y puente H <strong>TB6612FNG</strong> en la placa clásica ESP32 DevKit V1. Ofrece conexión directa desde <strong>iPhone (iOS)</strong> y Android sin requerir emparejamiento previo. Incluye retroalimentación mediante el <strong>LED azul integrado en GPIO 2</strong>, el cual destella con cada comando recibido.
+              {:else}
+                Control inalámbrico para carros RC con puente H <strong>TB6612FNG</strong>. El firmware utiliza <strong>Bluetooth Classic (SPP)</strong> para vincularse directamente con aplicaciones móviles universales sin requerir BLE ni apps especiales.
+              {/if}
             </p>
           </div>
 
@@ -830,9 +917,9 @@
               disabled={isEsp32Busy}
             >
               {#if isFlashingEsp32}
-                <span class="spinner-inline">⏳</span> Subiendo a ESP32...
+                <span class="spinner-inline">⏳</span> Subiendo a {esp32Model === 'esp32_s3' ? 'ESP32-S3' : esp32Model === 'esp32_ble' ? 'ESP32 BLE' : 'ESP32'}...
               {:else}
-                <span>🚀</span> Flashear Carro ESP32
+                <span>🚀</span> Flashear Carro {esp32Model === 'esp32_s3' ? 'ESP32-S3 (BLE 5.0)' : esp32Model === 'esp32_ble' ? 'ESP32 (BLE 4.2)' : 'ESP32 (BT Classic)'}
               {/if}
             </button>
 
@@ -848,7 +935,7 @@
             <div class="alert-box">
               <span class="alert-icon">💡</span>
               <div class="alert-text">
-                <strong>Consejo para ESP32:</strong> Si la consola muestra <code>Connecting....._____.....</code>, mantén presionado el botón <strong>BOOT</strong> (o IO0) en tu placa ESP32 por 2 segundos hasta que comience el borrado y escritura de la memoria flash.
+                <strong>Consejo de Conexión:</strong> Si la consola muestra <code>Connecting....._____.....</code>, mantén presionado el botón <strong>BOOT</strong> (o IO0) en tu placa ESP32 por 2 segundos hasta que comience el borrado y escritura de la memoria flash.
               </div>
             </div>
           </div>
@@ -872,83 +959,243 @@
 
           <!-- Wiring Schematic and Pinout Table -->
           <div class="section-card">
-            <h4>🔌 Conexiones Eléctricas (ESP32 DevKit V1 ⟷ Driver TB6612FNG)</h4>
-            <div class="table-responsive">
-              <table class="pinout-table">
-                <thead>
-                  <tr>
-                    <th>Función</th>
-                    <th>Pin ESP32</th>
-                    <th>Pin Driver</th>
-                    <th>Descripción</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td><span class="badge-tag pwm">PWMA</span></td>
-                    <td><strong>GPIO 32</strong></td>
-                    <td>PWMA</td>
-                    <td>PWM Motor Izquierdo (LEDC 20 kHz ultrasónico)</td>
-                  </tr>
-                  <tr>
-                    <td><span class="badge-tag dir">Control A1</span></td>
-                    <td><strong>GPIO 25</strong></td>
-                    <td>AIN1</td>
-                    <td>Dirección 1 Motor Izquierdo</td>
-                  </tr>
-                  <tr>
-                    <td><span class="badge-tag dir">Control A2</span></td>
-                    <td><strong>GPIO 33</strong></td>
-                    <td>AIN2</td>
-                    <td>Dirección 2 Motor Izquierdo</td>
-                  </tr>
-                  <tr>
-                    <td><span class="badge-tag pwm">PWMB</span></td>
-                    <td><strong>GPIO 18</strong></td>
-                    <td>PWMB</td>
-                    <td>PWM Motor Derecho (LEDC 20 kHz ultrasónico)</td>
-                  </tr>
-                  <tr>
-                    <td><span class="badge-tag dir">Control B1</span></td>
-                    <td><strong>GPIO 19</strong></td>
-                    <td>BIN1</td>
-                    <td>Dirección 1 Motor Derecho</td>
-                  </tr>
-                  <tr>
-                    <td><span class="badge-tag dir">Control B2</span></td>
-                    <td><strong>GPIO 27</strong></td>
-                    <td>BIN2</td>
-                    <td>Dirección 2 Motor Derecho</td>
-                  </tr>
-                  <tr>
-                    <td><span class="badge-tag stby">STBY</span></td>
-                    <td><strong>GPIO 26</strong></td>
-                    <td>STBY</td>
-                    <td>Habilitador del puente H (Nivel HIGH activo)</td>
-                  </tr>
-                  <tr>
-                    <td><span class="badge-tag pwr">GND</span></td>
-                    <td><strong>GND</strong></td>
-                    <td>GND</td>
-                    <td>Tierra común lógica y de potencia</td>
-                  </tr>
-                  <tr>
-                    <td><span class="badge-tag pwr">VCC</span></td>
-                    <td><strong>VIN / 5V</strong></td>
-                    <td>VCC</td>
-                    <td>Alimentación lógica del driver (5V)</td>
-                  </tr>
-                </tbody>
-              </table>
+            <div class="card-header-row">
+              <h4>🔌 Conexiones Eléctricas ({esp32Model === 'esp32_s3' ? 'ESP32-S3 DevKit 2022 v1.3' : esp32Model === 'esp32_ble' ? 'ESP32 DevKit V1 (BLE 4.2)' : 'ESP32 DevKit V1'} ⟷ Driver TB6612FNG)</h4>
+              <span class="badge-chip">{esp32Model === 'esp32_s3' ? 'Pines ESP32-S3' : 'Pines ESP32'}</span>
             </div>
+
+            {#if esp32Model === 'esp32_s3'}
+              <div class="table-responsive">
+                <table class="pinout-table">
+                  <thead>
+                    <tr>
+                      <th>Función</th>
+                      <th>Pin ESP32-S3</th>
+                      <th>Pin Driver / Periférico</th>
+                      <th>Descripción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="highlight-row">
+                      <td><span class="badge-tag led">NeoPixel RGB</span></td>
+                      <td><strong>GPIO 48</strong></td>
+                      <td>WS2812B Integrado</td>
+                      <td><strong>Indicador visual BLE:</strong> Azul (espera), Verde/Cian (conectado), Destellos vivos al recibir órdenes</td>
+                    </tr>
+                    <tr>
+                      <td><span class="badge-tag pwm">PWMA</span></td>
+                      <td><strong>GPIO 4</strong></td>
+                      <td>PWMA</td>
+                      <td>PWM Motor Izquierdo (LEDC 1 kHz)</td>
+                    </tr>
+                    <tr>
+                      <td><span class="badge-tag dir">Control A1</span></td>
+                      <td><strong>GPIO 5</strong></td>
+                      <td>AIN1</td>
+                      <td>Dirección 1 Motor Izquierdo</td>
+                    </tr>
+                    <tr>
+                      <td><span class="badge-tag dir">Control A2</span></td>
+                      <td><strong>GPIO 6</strong></td>
+                      <td>AIN2</td>
+                      <td>Dirección 2 Motor Izquierdo</td>
+                    </tr>
+                    <tr>
+                      <td><span class="badge-tag pwm">PWMB</span></td>
+                      <td><strong>GPIO 7</strong></td>
+                      <td>PWMB</td>
+                      <td>PWM Motor Derecho (LEDC 1 kHz)</td>
+                    </tr>
+                    <tr>
+                      <td><span class="badge-tag dir">Control B1</span></td>
+                      <td><strong>GPIO 15</strong></td>
+                      <td>BIN1</td>
+                      <td>Dirección 1 Motor Derecho</td>
+                    </tr>
+                    <tr>
+                      <td><span class="badge-tag dir">Control B2</span></td>
+                      <td><strong>GPIO 16</strong></td>
+                      <td>BIN2</td>
+                      <td>Dirección 2 Motor Derecho</td>
+                    </tr>
+                    <tr>
+                      <td><span class="badge-tag stby">STBY</span></td>
+                      <td><strong>GPIO 17</strong></td>
+                      <td>STBY</td>
+                      <td>Habilitador del puente H (Nivel HIGH activo)</td>
+                    </tr>
+                    <tr>
+                      <td><span class="badge-tag pwr">GND</span></td>
+                      <td><strong>GND</strong></td>
+                      <td>GND</td>
+                      <td>Tierra común lógica y de potencia</td>
+                    </tr>
+                    <tr>
+                      <td><span class="badge-tag pwr">VCC</span></td>
+                      <td><strong>5V / VIN</strong></td>
+                      <td>VCC</td>
+                      <td>Alimentación lógica del driver (5V)</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            {:else}
+              <div class="table-responsive">
+                <table class="pinout-table">
+                  <thead>
+                    <tr>
+                      <th>Función</th>
+                      <th>Pin ESP32</th>
+                      <th>Pin Driver / Periférico</th>
+                      <th>Descripción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {#if esp32Model === 'esp32_ble'}
+                      <tr class="highlight-row">
+                        <td><span class="badge-tag led">LED Azul</span></td>
+                        <td><strong>GPIO 2</strong></td>
+                        <td>LED Integrado (LED_BUILTIN)</td>
+                        <td><strong>Indicador visual BLE:</strong> Parpadeo regular en espera y pulso con cada comando recibido</td>
+                      </tr>
+                    {/if}
+                    <tr>
+                      <td><span class="badge-tag pwm">PWMA</span></td>
+                      <td><strong>GPIO 32</strong></td>
+                      <td>PWMA</td>
+                      <td>PWM Motor Izquierdo (LEDC 1 kHz)</td>
+                    </tr>
+                    <tr>
+                      <td><span class="badge-tag dir">Control A1</span></td>
+                      <td><strong>GPIO 25</strong></td>
+                      <td>AIN1</td>
+                      <td>Dirección 1 Motor Izquierdo</td>
+                    </tr>
+                    <tr>
+                      <td><span class="badge-tag dir">Control A2</span></td>
+                      <td><strong>GPIO 33</strong></td>
+                      <td>AIN2</td>
+                      <td>Dirección 2 Motor Izquierdo</td>
+                    </tr>
+                    <tr>
+                      <td><span class="badge-tag pwm">PWMB</span></td>
+                      <td><strong>GPIO 18</strong></td>
+                      <td>PWMB</td>
+                      <td>PWM Motor Derecho (LEDC 1 kHz)</td>
+                    </tr>
+                    <tr>
+                      <td><span class="badge-tag dir">Control B1</span></td>
+                      <td><strong>GPIO 19</strong></td>
+                      <td>BIN1</td>
+                      <td>Dirección 1 Motor Derecho</td>
+                    </tr>
+                    <tr>
+                      <td><span class="badge-tag dir">Control B2</span></td>
+                      <td><strong>GPIO 27</strong></td>
+                      <td>BIN2</td>
+                      <td>Dirección 2 Motor Derecho</td>
+                    </tr>
+                    <tr>
+                      <td><span class="badge-tag stby">STBY</span></td>
+                      <td><strong>GPIO 26</strong></td>
+                      <td>STBY</td>
+                      <td>Habilitador del puente H (Nivel HIGH activo)</td>
+                    </tr>
+                    <tr>
+                      <td><span class="badge-tag pwr">GND</span></td>
+                      <td><strong>GND</strong></td>
+                      <td>GND</td>
+                      <td>Tierra común lógica y de potencia</td>
+                    </tr>
+                    <tr>
+                      <td><span class="badge-tag pwr">VCC</span></td>
+                      <td><strong>VIN / 5V</strong></td>
+                      <td>VCC</td>
+                      <td>Alimentación lógica del driver (5V)</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            {/if}
           </div>
 
           <!-- Bluetooth Control Guide & Mobile Apps -->
           <div class="section-card">
-            <h4>📱 Protocolo Bluetooth Classic y Aplicaciones Móviles</h4>
+            <h4>
+              {esp32Model === 'esp32_s3'
+                ? '⚡ Protocolo Bluetooth Low Energy (BLE 5.0)'
+                : esp32Model === 'esp32_ble'
+                  ? '📱 Protocolo Bluetooth Low Energy (BLE 4.2 • iOS)'
+                  : '🚗 Protocolo Bluetooth Classic'} y Aplicaciones Móviles
+            </h4>
             <p class="section-desc">
-              Una vez flasheado, enciende el Bluetooth de tu teléfono y vincula el dispositivo con el nombre asignado (código PIN estándar: <code>1234</code> o sin PIN).
+              {#if esp32Model === 'esp32_s3'}
+                El ESP32-S3 transmite mediante <strong>BLE 5.0 (Nordic UART Service - NUS)</strong>. Conéctate directamente desde aplicaciones móviles de terminal BLE o mandos virtuales sin requerir emparejamiento previo en los ajustes del sistema de Android/iOS.
+              {:else if esp32Model === 'esp32_ble'}
+                El ESP32 DevKit V1 transmite mediante <strong>BLE 4.2 (Nordic UART Service - NUS)</strong>. Conéctate directamente desde aplicaciones móviles BLE en <strong>iOS (iPhone/iPad)</strong> y Android sin necesidad de vincularlo en los ajustes Bluetooth del sistema operativo.
+              {:else}
+                Una vez flasheado, enciende el Bluetooth de tu teléfono y vincula el dispositivo con el nombre asignado (código PIN estándar: <code>1234</code> o sin PIN).
+              {/if}
             </p>
+
+            {#if esp32Model === 'esp32_s3'}
+              <!-- Visual Indicator feedback card for NeoPixel -->
+              <div class="neopixel-feedback-box">
+                <div class="feedback-title">
+                  <span class="led-dot"></span>
+                  <strong>Comportamiento del LED NeoPixel Integrado (GPIO 48):</strong>
+                </div>
+                <div class="feedback-grid">
+                  <div class="feedback-item">
+                    <span class="color-badge blue">Azul</span>
+                    <span><strong>Esperando Conexión:</strong> Pulso respiración suave anunciando BLE.</span>
+                  </div>
+                  <div class="feedback-item">
+                    <span class="color-badge cyan">Verde/Cian</span>
+                    <span><strong>Conectado:</strong> Luz continua suave lista para recibir órdenes.</span>
+                  </div>
+                  <div class="feedback-item">
+                    <span class="color-badge green">Verde</span>
+                    <span><strong>Adelante (F):</strong> Destello brillante de confirmación motriz.</span>
+                  </div>
+                  <div class="feedback-item">
+                    <span class="color-badge orange">Naranja</span>
+                    <span><strong>Giros (L / R):</strong> Destello brillante de cambio de dirección.</span>
+                  </div>
+                  <div class="feedback-item">
+                    <span class="color-badge red">Rojo</span>
+                    <span><strong>Detener (S / D):</strong> Destello de freno inmediato.</span>
+                  </div>
+                  <div class="feedback-item">
+                    <span class="color-badge purple">Blanco</span>
+                    <span><strong>Velocidad (0-9, q):</strong> Confirmación de cambio de PWM.</span>
+                  </div>
+                </div>
+              </div>
+            {:else if esp32Model === 'esp32_ble'}
+              <!-- Visual Indicator feedback card for Blue LED GPIO 2 -->
+              <div class="neopixel-feedback-box">
+                <div class="feedback-title">
+                  <span class="led-dot" style="background: #3b82f6; box-shadow: 0 0 10px #3b82f6;"></span>
+                  <strong>Comportamiento del LED Azul Integrado (GPIO 2 - LED_BUILTIN):</strong>
+                </div>
+                <div class="feedback-grid">
+                  <div class="feedback-item">
+                    <span class="color-badge blue">Azul Parpadeante</span>
+                    <span><strong>Esperando Conexión:</strong> Destello regular indicando modo visible BLE 4.2.</span>
+                  </div>
+                  <div class="feedback-item">
+                    <span class="color-badge cyan">Azul Fijo</span>
+                    <span><strong>Conectado:</strong> Luz continua suave indicando enlace NUS activo.</span>
+                  </div>
+                  <div class="feedback-item">
+                    <span class="color-badge purple">Pulso Rápido</span>
+                    <span><strong>Comando Recibido:</strong> Destello rápido de confirmación al recibir orden o velocidad.</span>
+                  </div>
+                </div>
+              </div>
+            {/if}
+
             <div class="command-grid">
               <div class="cmd-item"><kbd>F</kbd> <span>Adelante</span></div>
               <div class="cmd-item"><kbd>B</kbd> <span>Atrás (Reversa)</span></div>
@@ -959,15 +1206,23 @@
               <div class="cmd-item"><kbd>H</kbd> <span>Atrás-Izquierda</span></div>
               <div class="cmd-item"><kbd>J</kbd> <span>Atrás-Derecha</span></div>
               <div class="cmd-item"><kbd>S</kbd> <span>Detener (Stop)</span></div>
-              <div class="cmd-item"><kbd>0 - 9</kbd> <span>Velocidad (0% a 90%)</span></div>
-              <div class="cmd-item"><kbd>q</kbd> <span>Velocidad Máxima (100%)</span></div>
+              <div class="cmd-item"><kbd>0 - 9</kbd> <span>Velocidad (0: 0% hasta 9: 100%)</span></div>
+              <div class="cmd-item"><kbd>q / Q</kbd> <span>Velocidad 100% (Respaldo)</span></div>
             </div>
+
             <div class="apps-recommendation">
               <strong>📲 Apps Recomendadas en Google Play / iOS:</strong>
               <ul>
-                <li><strong>Arduino Bluetooth RC Car</strong> (por Andi.Co) - Controles por pad virtual, flechas y acelerómetro.</li>
-                <li><strong>Serial Bluetooth Terminal</strong> (por Kai Morich) - Para envío directo de caracteres y depuración.</li>
-                <li><strong>Bluetooth Controller</strong> - Mandos virtuales configurables.</li>
+                {#if esp32Model === 'esp32_s3' || esp32Model === 'esp32_ble'}
+                  <li><strong>Serial Bluetooth Terminal</strong> (por Kai Morich) - Pestaña <em>Bluetooth LE</em> &gt; Dispositivos &gt; Conectar directamente al nombre del carro.</li>
+                  <li><strong>Dabble - Smartphone Companion</strong> (iOS / Android) - Módulo Gamepad / Joystick con protocolo NUS.</li>
+                  <li><strong>BLE Joystick / Bluetooth Electronics</strong> - Mandos virtuales BLE personalizables.</li>
+                  <li><strong>nRF Connect for Mobile</strong> (iOS / Android) - Exploración de servicios y prueba de paquetes GATT BLE.</li>
+                {:else}
+                  <li><strong>Arduino Bluetooth RC Car</strong> (por Andi.Co) - Controles por pad virtual, flechas y acelerómetro.</li>
+                  <li><strong>Serial Bluetooth Terminal</strong> (por Kai Morich) - Pestaña <em>Bluetooth Classic</em> para envío de caracteres y depuración.</li>
+                  <li><strong>Bluetooth Controller</strong> - Mandos virtuales configurables.</li>
+                {/if}
               </ul>
             </div>
           </div>
@@ -1891,5 +2146,184 @@
     color: var(--text-secondary);
     margin: 0;
     line-height: 1.45;
+  }
+
+  /* ESP32 Model Selector Bar */
+  .model-selector-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  @media (max-width: 500px) {
+    .model-selector-bar {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .model-choice-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+  }
+
+  .model-choice-btn:hover:not(:disabled) {
+    border-color: var(--border-highlight);
+    background: var(--bg-subtle);
+    transform: translateY(-1px);
+  }
+
+  .model-choice-btn.active {
+    border-color: #0284c7;
+    background: rgba(2, 132, 199, 0.12);
+    box-shadow: 0 0 12px rgba(2, 132, 199, 0.2);
+  }
+
+  .choice-icon {
+    font-size: 1.6rem;
+  }
+
+  .choice-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .choice-text strong {
+    font-size: 0.84rem;
+    color: var(--text-primary);
+  }
+
+  .model-choice-btn.active .choice-text strong {
+    color: #38bdf8;
+  }
+
+  .choice-sub {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+  }
+
+  /* NeoPixel Feedback Box */
+  .neopixel-feedback-box {
+    margin-bottom: 1rem;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 8px;
+    padding: 0.85rem;
+  }
+
+  .feedback-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.65rem;
+    font-size: 0.8rem;
+    color: #38bdf8;
+  }
+
+  .led-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #38bdf8;
+    box-shadow: 0 0 8px #38bdf8;
+    animation: pulseLed 1.5s infinite;
+  }
+
+  @keyframes pulseLed {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+
+  .feedback-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    font-size: 0.74rem;
+  }
+
+  @media (max-width: 500px) {
+    .feedback-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .feedback-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+    background: var(--bg-subtle);
+    padding: 0.4rem 0.5rem;
+    border-radius: 6px;
+    color: var(--text-secondary);
+    line-height: 1.35;
+  }
+
+  .feedback-item strong {
+    color: var(--text-primary);
+  }
+
+  .color-badge {
+    display: inline-block;
+    padding: 0.15rem 0.35rem;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .color-badge.blue {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.4);
+  }
+
+  .color-badge.cyan {
+    background: rgba(6, 182, 212, 0.2);
+    color: #22d3ee;
+    border: 1px solid rgba(6, 182, 212, 0.4);
+  }
+
+  .color-badge.green {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.4);
+  }
+
+  .color-badge.orange {
+    background: rgba(249, 115, 22, 0.2);
+    color: #fb923c;
+    border: 1px solid rgba(249, 115, 22, 0.4);
+  }
+
+  .color-badge.red {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+  }
+
+  .color-badge.purple {
+    background: rgba(168, 85, 247, 0.2);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.4);
+  }
+
+  .highlight-row {
+    background: rgba(2, 132, 199, 0.08);
+  }
+
+  .badge-tag.led {
+    background: rgba(168, 85, 247, 0.2);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.4);
   }
 </style>

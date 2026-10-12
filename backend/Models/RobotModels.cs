@@ -38,3 +38,19 @@ public class CommandRequest
 {
     public string Command { get; set; } = string.Empty;
 }
+
+public class FlashFirmwareRequest
+{
+    public string Port { get; set; } = string.Empty;
+    public string RobotType { get; set; } = "IM_16";
+    public int BaudRate { get; set; } = 115200;
+    public bool AutoFallback { get; set; } = true;
+}
+
+public class FlashFirmwareResult
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public string Log { get; set; } = string.Empty;
+    public int UsedBaud { get; set; }
+}

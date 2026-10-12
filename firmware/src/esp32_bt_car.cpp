@@ -30,8 +30,8 @@ __attribute__((used)) const char BT_DEVICE_NAME[32] = "##BT_CAR_CUSTOM_NAME_TOKE
 #define INVERT_MOTOR_A true
 #define INVERT_MOTOR_B true
 
-// Configuración LEDC PWM (Ultrasónico 20 kHz para evitar silbido de motor)
-#define PWM_FREQ 20000
+// Configuración LEDC PWM (1 kHz para óptimo par de arranque y evitar bloqueos)
+#define PWM_FREQ 1000
 #define PWM_RES  8
 #define PWM_CH_A 0
 #define PWM_CH_B 1
@@ -42,12 +42,24 @@ uint8_t currentSpeed = 200; // Por defecto ~78%
 void setMotors(int speedA, int speedB) {
     // Control Motor A (Izquierdo)
     if (speedA > 0) {
-        digitalWrite(PIN_AIN1, INVERT_MOTOR_A ? LOW : HIGH);
-        digitalWrite(PIN_AIN2, INVERT_MOTOR_A ? HIGH : LOW);
+        // Apagar el pin contrario primero para evitar estado HIGH/HIGH (Short Brake) transitorio
+        if (INVERT_MOTOR_A) {
+            digitalWrite(PIN_AIN1, LOW);
+            digitalWrite(PIN_AIN2, HIGH);
+        } else {
+            digitalWrite(PIN_AIN2, LOW);
+            digitalWrite(PIN_AIN1, HIGH);
+        }
         ledcWrite(PWM_CH_A, speedA > 255 ? 255 : speedA);
     } else if (speedA < 0) {
-        digitalWrite(PIN_AIN1, INVERT_MOTOR_A ? HIGH : LOW);
-        digitalWrite(PIN_AIN2, INVERT_MOTOR_A ? LOW : HIGH);
+        // Apagar el pin contrario primero para evitar estado HIGH/HIGH (Short Brake) transitorio
+        if (INVERT_MOTOR_A) {
+            digitalWrite(PIN_AIN2, LOW);
+            digitalWrite(PIN_AIN1, HIGH);
+        } else {
+            digitalWrite(PIN_AIN1, LOW);
+            digitalWrite(PIN_AIN2, HIGH);
+        }
         ledcWrite(PWM_CH_A, (-speedA) > 255 ? 255 : -speedA);
     } else {
         digitalWrite(PIN_AIN1, LOW);
@@ -57,12 +69,24 @@ void setMotors(int speedA, int speedB) {
 
     // Control Motor B (Derecho)
     if (speedB > 0) {
-        digitalWrite(PIN_BIN1, INVERT_MOTOR_B ? LOW : HIGH);
-        digitalWrite(PIN_BIN2, INVERT_MOTOR_B ? HIGH : LOW);
+        // Apagar el pin contrario primero para evitar estado HIGH/HIGH (Short Brake) transitorio
+        if (INVERT_MOTOR_B) {
+            digitalWrite(PIN_BIN1, LOW);
+            digitalWrite(PIN_BIN2, HIGH);
+        } else {
+            digitalWrite(PIN_BIN2, LOW);
+            digitalWrite(PIN_BIN1, HIGH);
+        }
         ledcWrite(PWM_CH_B, speedB > 255 ? 255 : speedB);
     } else if (speedB < 0) {
-        digitalWrite(PIN_BIN1, INVERT_MOTOR_B ? HIGH : LOW);
-        digitalWrite(PIN_BIN2, INVERT_MOTOR_B ? LOW : HIGH);
+        // Apagar el pin contrario primero para evitar estado HIGH/HIGH (Short Brake) transitorio
+        if (INVERT_MOTOR_B) {
+            digitalWrite(PIN_BIN2, LOW);
+            digitalWrite(PIN_BIN1, HIGH);
+        } else {
+            digitalWrite(PIN_BIN1, LOW);
+            digitalWrite(PIN_BIN2, HIGH);
+        }
         ledcWrite(PWM_CH_B, (-speedB) > 255 ? 255 : -speedB);
     } else {
         digitalWrite(PIN_BIN1, LOW);
@@ -106,18 +130,23 @@ void executeCommand(char cmd) {
             stopCar();
             break;
 
-        // Comandos de velocidad universales (0 a 9, q = 100%)
-        case '0': currentSpeed = 0;   break;
-        case '1': currentSpeed = 50;  break;
-        case '2': currentSpeed = 75;  break;
-        case '3': currentSpeed = 100; break;
-        case '4': currentSpeed = 125; break;
-        case '5': currentSpeed = 150; break;
-        case '6': currentSpeed = 175; break;
-        case '7': currentSpeed = 200; break;
-        case '8': currentSpeed = 225; break;
-        case '9': currentSpeed = 240; break;
-        case 'q': currentSpeed = 255; break;
+        // Comandos de velocidad universales (0 = 0% hasta 9 = 100%)
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+            currentSpeed = (uint8_t)((cmd - '0') * 255 / 9);
+            break;
+        case 'q':
+        case 'Q':
+            currentSpeed = 255;
+            break;
 
         default:
             break;

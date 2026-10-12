@@ -22,6 +22,11 @@ public class SerialService : IDisposable
         return SerialPort.GetPortNames();
     }
 
+    public void EmitLog(string message)
+    {
+        OnLogReceived?.Invoke(message);
+    }
+
     public bool Connect(string portName, int baudRate = 115200)
     {
         try
