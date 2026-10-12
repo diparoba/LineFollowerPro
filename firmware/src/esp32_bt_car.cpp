@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "BluetoothSerial.h"
+#include "driver/gpio.h" // Fuerza de salida GPIO
 
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
 #error Bluetooth is not enabled! Please run `make menuconfig` to enable it
@@ -8,8 +9,6 @@
 BluetoothSerial SerialBT;
 
 // Búfer fijo de 32 bytes con token de reemplazo único.
-// El servicio de flasheo de la aplicación reemplazará "##BT_CAR_CUSTOM_NAME_TOKEN##"
-// por el nombre configurado por el usuario en la interfaz gráfica antes de flashear.
 __attribute__((used)) const char BT_DEVICE_NAME[32] = "##BT_CAR_CUSTOM_NAME_TOKEN##\0\0\0";
 
 // --- Asignación de Pines TB6612FNG (ESP32 DevKit V1) ---
@@ -26,11 +25,11 @@ __attribute__((used)) const char BT_DEVICE_NAME[32] = "##BT_CAR_CUSTOM_NAME_TOKE
 // Standby
 #define PIN_STBY 26
 
-// Inversión de Polaridad de Motores (true: invierte sentido de giro para corregir avance/giro)
+// Inversión de Polaridad de Motores
 #define INVERT_MOTOR_A true
 #define INVERT_MOTOR_B true
 
-// Configuración LEDC PWM (1 kHz para óptimo par de arranque y evitar bloqueos)
+// Configuración LEDC PWM
 #define PWM_FREQ 1000
 #define PWM_RES  8
 #define PWM_CH_A 0
@@ -40,9 +39,12 @@ __attribute__((used)) const char BT_DEVICE_NAME[32] = "##BT_CAR_CUSTOM_NAME_TOKE
 uint8_t currentSpeed = 200; // Por defecto ~78%
 
 void setMotors(int speedA, int speedB) {
+    // Apagar PWM momentáneamente para evitar picos inductivos durante la conmutación de dirección
+    ledcWrite(PWM_CH_A, 0);
+    ledcWrite(PWM_CH_B, 0);
+
     // Control Motor A (Izquierdo)
     if (speedA > 0) {
-        // Apagar el pin contrario primero para evitar estado HIGH/HIGH (Short Brake) transitorio
         if (INVERT_MOTOR_A) {
             digitalWrite(PIN_AIN1, LOW);
             digitalWrite(PIN_AIN2, HIGH);
@@ -50,9 +52,7 @@ void setMotors(int speedA, int speedB) {
             digitalWrite(PIN_AIN2, LOW);
             digitalWrite(PIN_AIN1, HIGH);
         }
-        ledcWrite(PWM_CH_A, speedA > 255 ? 255 : speedA);
     } else if (speedA < 0) {
-        // Apagar el pin contrario primero para evitar estado HIGH/HIGH (Short Brake) transitorio
         if (INVERT_MOTOR_A) {
             digitalWrite(PIN_AIN2, LOW);
             digitalWrite(PIN_AIN1, HIGH);
@@ -60,16 +60,13 @@ void setMotors(int speedA, int speedB) {
             digitalWrite(PIN_AIN1, LOW);
             digitalWrite(PIN_AIN2, HIGH);
         }
-        ledcWrite(PWM_CH_A, (-speedA) > 255 ? 255 : -speedA);
     } else {
         digitalWrite(PIN_AIN1, LOW);
         digitalWrite(PIN_AIN2, LOW);
-        ledcWrite(PWM_CH_A, 0);
     }
 
     // Control Motor B (Derecho)
     if (speedB > 0) {
-        // Apagar el pin contrario primero para evitar estado HIGH/HIGH (Short Brake) transitorio
         if (INVERT_MOTOR_B) {
             digitalWrite(PIN_BIN1, LOW);
             digitalWrite(PIN_BIN2, HIGH);
@@ -77,9 +74,7 @@ void setMotors(int speedA, int speedB) {
             digitalWrite(PIN_BIN2, LOW);
             digitalWrite(PIN_BIN1, HIGH);
         }
-        ledcWrite(PWM_CH_B, speedB > 255 ? 255 : speedB);
     } else if (speedB < 0) {
-        // Apagar el pin contrario primero para evitar estado HIGH/HIGH (Short Brake) transitorio
         if (INVERT_MOTOR_B) {
             digitalWrite(PIN_BIN2, LOW);
             digitalWrite(PIN_BIN1, HIGH);
@@ -87,12 +82,16 @@ void setMotors(int speedA, int speedB) {
             digitalWrite(PIN_BIN1, LOW);
             digitalWrite(PIN_BIN2, HIGH);
         }
-        ledcWrite(PWM_CH_B, (-speedB) > 255 ? 255 : -speedB);
     } else {
         digitalWrite(PIN_BIN1, LOW);
         digitalWrite(PIN_BIN2, LOW);
-        ledcWrite(PWM_CH_B, 0);
     }
+
+    // Reactivar PWM con el ciclo de trabajo correspondiente
+    int dutyA = constrain(abs(speedA), 0, 255);
+    int dutyB = constrain(abs(speedB), 0, 255);
+    ledcWrite(PWM_CH_A, dutyA);
+    ledcWrite(PWM_CH_B, dutyB);
 }
 
 void stopCar() {
@@ -113,38 +112,39 @@ void executeCommand(char cmd) {
         case 'R': // Giro sobre su eje Derecha
             setMotors(currentSpeed, -currentSpeed);
             break;
-        case 'G': // Adelante + Izquierda
-            setMotors(currentSpeed / 3, currentSpeed);
-            break;
-        case 'I': // Adelante + Derecha
-            setMotors(currentSpeed, currentSpeed / 3);
-            break;
-        case 'H': // Reversa + Izquierda
-            setMotors(-currentSpeed / 3, -currentSpeed);
-            break;
-        case 'J': // Reversa + Derecha
-            setMotors(-currentSpeed, -currentSpeed / 3);
-            break;
         case 'S': // Detener
-        case 'D': // Detener todo
             stopCar();
             break;
 
-        // Comandos de velocidad universales (0 = 0% hasta 9 = 100%)
+        // Comandos de velocidad individuales según tu calibración
         case '0':
-        case '1':
-        case '2':
-        case '3':
-        case '4':
-        case '5':
-        case '6':
-        case '7':
-        case '8':
-        case '9':
-            currentSpeed = (uint8_t)((cmd - '0') * 255 / 9);
+            currentSpeed = 60;
             break;
-        case 'q':
-        case 'Q':
+        case '1':
+            currentSpeed = 70;
+            break;
+        case '2':
+            currentSpeed = 80;
+            break;
+        case '3':
+            currentSpeed = 90;
+            break;
+        case '4':
+            currentSpeed = 100;
+            break;
+        case '5':
+            currentSpeed = 130;
+            break;
+        case '6':
+            currentSpeed = 160;
+            break;
+        case '7':
+            currentSpeed = 190;
+            break;
+        case '8':
+            currentSpeed = 220;
+            break;
+        case '9':
             currentSpeed = 255;
             break;
 
@@ -163,6 +163,12 @@ void setup() {
     pinMode(PIN_BIN2, OUTPUT);
     pinMode(PIN_STBY, OUTPUT);
 
+    // Refuerzo de corriente de salida (Drive Strength) en pines clave para la PCB
+    gpio_set_drive_capability((gpio_num_t)PIN_AIN1, GPIO_DRIVE_CAP_3);
+    gpio_set_drive_capability((gpio_num_t)PIN_AIN2, GPIO_DRIVE_CAP_3); // Refuerza GPIO 33
+    gpio_set_drive_capability((gpio_num_t)PIN_BIN1, GPIO_DRIVE_CAP_3); // Refuerza GPIO 19
+    gpio_set_drive_capability((gpio_num_t)PIN_BIN2, GPIO_DRIVE_CAP_3);
+
     // Habilitar driver TB6612 (STBY en HIGH)
     digitalWrite(PIN_STBY, HIGH);
 
@@ -175,7 +181,7 @@ void setup() {
 
     stopCar();
 
-    // Inicializar Bluetooth Classic SPP con el nombre del dispositivo
+    // Inicializar Bluetooth Classic SPP
     SerialBT.begin(BT_DEVICE_NAME);
     Serial.print(F("[ESP32 Car] Bluetooth Classic iniciado. Nombre: "));
     Serial.println(BT_DEVICE_NAME);
@@ -184,11 +190,6 @@ void setup() {
 void loop() {
     if (SerialBT.available()) {
         char cmd = (char)SerialBT.read();
-        executeCommand(cmd);
-    }
-
-    if (Serial.available()) {
-        char cmd = (char)Serial.read();
         executeCommand(cmd);
     }
 }
