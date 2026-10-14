@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculadora de Fórmulas y Simulador de Decisiones PD | Seguidor de Línea</title>
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --bg-card: #0f172a;
+      --bg-card-subtle: #1e293b;
+      --border-color: #334155;
+      --border-accent: #38bdf8;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-highlight: #38bdf8;
+      --accent-green: #10b981;
+      --accent-yellow: #f59e0b;
+      --accent-red: #ef4444;
+      --accent-purple: #a855f7;
+      --accent-blue: #0284c7;
+      --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      padding: 1.5rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1.5rem;
+    }
+
+    header h1 {
+      font-size: 1.85rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #38bdf8, #818cf8, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .container {
+      max-width: 1350px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 1024px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .card h2 {
+      font-size: 1.15rem;
+      color: var(--text-highlight);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.5rem;
+    }
+
+    .category-pills {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .cat-btn {
+      flex: 1;
+      padding: 0.6rem 1rem;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card-subtle);
+      color: var(--text-muted);
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.85rem;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .cat-btn.active {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: var(--border-accent);
+      color: var(--text-highlight);
+    }
+
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .control-label .val-tag {
+      font-family: var(--font-mono);
+      color: var(--text-highlight);
+      font-weight: 700;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--border-accent);
+      background: var(--bg-card-subtle);
+      height: 6px;
+      border-radius: 3px;
+    }
+
+    input[type="number"] {
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+    }
+
+    input[type="number"]:focus {
+      outline: none;
+      border-color: var(--border-accent);
+    }
+
+    /* Calcs Display */
+    .calcs-box {
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+    }
+
+    .calc-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.45rem 0;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+      font-size: 0.85rem;
+    }
+
+    .calc-row:last-child {
+      border-bottom: none;
+    }
+
+    .calc-val {
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 0.2rem 0.55rem;
+      border-radius: 9999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .badge-optimal {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .badge-warning {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+
+    .badge-danger {
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+
+    /* Decision Simulator */
+    .sim-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .sensors-bar {
+      display: flex;
+      gap: 3px;
+      background: var(--bg-dark);
+      padding: 0.6rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      height: 60px;
+      align-items: flex-end;
+    }
+
+    .sensor-item {
+      flex: 1;
+      background: #1e293b;
+      border-radius: 3px;
+      transition: height 0.1s ease, background-color 0.1s ease;
+      min-height: 4px;
+      position: relative;
+    }
+
+    .sensor-item.active {
+      background: linear-gradient(to top, #0284c7, #38bdf8);
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+    }
+
+    .sensor-item.center-mark {
+      border-bottom: 3px solid var(--accent-yellow);
+    }
+
+    .motors-viz {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .motor-card {
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.85rem;
+      text-align: center;
+    }
+
+    .motor-title {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+    }
+
+    .motor-pwm {
+      font-family: var(--font-mono);
+      font-size: 1.5rem;
+      font-weight: 800;
+    }
+
+    .motor-dir {
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-top: 0.2rem;
+      text-transform: uppercase;
+    }
+
+    .dir-fwd { color: var(--accent-green); }
+    .dir-rev { color: var(--accent-red); }
+    .dir-stop { color: var(--text-muted); }
+
+    .meter-bar {
+      height: 8px;
+      background: #1e293b;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 0.5rem;
+    }
+
+    .meter-fill {
+      height: 100%;
+      transition: width 0.1s ease;
+    }
+
+    /* Decision Box */
+    .decision-banner {
+      background: rgba(30, 41, 59, 0.7);
+      border-left: 4px solid var(--border-accent);
+      padding: 1rem;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.88rem;
+    }
+
+    .decision-banner h4 {
+      color: var(--text-highlight);
+      font-size: 0.95rem;
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    canvas {
+      width: 100%;
+      height: 220px;
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+    }
+
+    .full-width {
+      grid-column: 1 / -1;
+    }
+
+    .formula-badge {
+      font-family: var(--font-mono);
+      background: rgba(255, 255, 255, 0.08);
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.82rem;
+      color: #e2e8f0;
+    }
+
+    .info-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .info-item {
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.85rem;
+    }
+
+    .info-item h3 {
+      font-size: 0.9rem;
+      color: #93c5fd;
+      margin-bottom: 0.4rem;
+    }
+
+    .info-item p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Calculadora de Calibración & Simulador de Decisiones PD</h1>
+    <p>
+      Modelado cinemático exacto, límites de saturación angular y análisis en tiempo real de las decisiones de control del microcontrolador ATmega328P.
+    </p>
+  </header>
+
+  <div class="container">
+
+    <!-- COLUMNA 1: PARÁMETROS Y CÁLCULOS TEÓRICOS DE LÍMITES -->
+    <div class="card">
+      <h2>⚙️ Parámetros del Robot & Fórmulas Teóricas</h2>
+
+      <div class="category-pills">
+        <button class="cat-btn active" id="btn-im16" onclick="setCategory('IM_16')">
+          🏎️ 16 Líneas (Ingeniero Maker)
+        </button>
+        <button class="cat-btn" id="btn-codex8" onclick="setCategory('CODEX_8')">
+          ⚡ 8 Líneas (Codex Analógico)
+        </button>
+      </div>
+
+      <div class="input-grid">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Velocidad Base (V_base)</span>
+            <span class="val-tag" id="val-base">180</span>
+          </div>
+          <input type="range" id="slider-base" min="60" max="255" value="180" oninput="updateCalcs()">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>Velocidad Máxima (V_max)</span>
+            <span class="val-tag" id="val-max">255</span>
+          </div>
+          <input type="range" id="slider-max" min="150" max="255" value="255" oninput="updateCalcs()">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>Frenado Activo (V_brake)</span>
+            <span class="val-tag" id="val-brake">130</span>
+          </div>
+          <input type="range" id="slider-brake" min="0" max="255" value="130" oninput="updateCalcs()">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>Sensibilidad (Kp)</span>
+            <span class="val-tag" id="val-kp">0.2400</span>
+          </div>
+          <input type="number" id="input-kp" step="0.005" min="0.01" max="1.5" value="0.24" oninput="syncKp()">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>Corrección (Kd)</span>
+            <span class="val-tag" id="val-kd">4.200</span>
+          </div>
+          <input type="number" id="input-kd" step="0.05" min="0.1" max="20" value="4.20" oninput="syncKd()">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>Saturación deseada (Sensores)</span>
+            <span class="val-tag" id="val-crit">3.0</span>
+          </div>
+          <input type="range" id="slider-crit" min="1.0" max="6.0" step="0.5" value="3.0" oninput="updateCalcs()">
+        </div>
+      </div>
+
+      <!-- Resultados Teóricos de Límites -->
+      <div class="calcs-box">
+        <h3 style="font-size:0.92rem; color:var(--text-highlight); margin-bottom:0.75rem;">
+          📊 Límites de Estabilidad y Capacidad de Giro
+        </h3>
+
+        <div class="calc-row">
+          <span>Kp Mínimo Teórico (Para no salirse por tangente):</span>
+          <span class="calc-val" id="res-kp-min" style="color:var(--accent-yellow)">0.0293</span>
+        </div>
+
+        <div class="calc-row">
+          <span>Kp Nominal Óptimo (Curva crítica sin retraso):</span>
+          <span class="calc-val" id="res-kp-nom" style="color:var(--accent-green)">0.2400</span>
+        </div>
+
+        <div class="calc-row">
+          <span>Kp Máximo Seguro (Evita sobrepasar vel. angular):</span>
+          <span class="calc-val" id="res-kp-max" style="color:var(--accent-red)">0.3850</span>
+        </div>
+
+        <div class="calc-row">
+          <span>Relación de Amortiguamiento (Kd / Kp):</span>
+          <span class="calc-val" id="res-ratio">17.50</span>
+        </div>
+
+        <div class="calc-row">
+          <span>Diagnóstico de Amortiguamiento:</span>
+          <span id="res-damping-badge" class="status-badge badge-optimal">ÓPTIMO (CRÍTICO)</span>
+        </div>
+
+        <div class="calc-row">
+          <span>Error que activa Reversa en rueda interna:</span>
+          <span class="calc-val" id="res-rev-err">e > 550</span>
+        </div>
+
+        <div class="calc-row">
+          <span>Error de Saturación Total de Giro (V_max y -V_brake):</span>
+          <span class="calc-val" id="res-sat-err">e > 1850</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUMNA 2: SIMULADOR DE DECISIONES EN VIVO -->
+    <div class="card">
+      <h2>🧠 Simulador de Decisiones en Tiempo Real</h2>
+
+      <div class="sim-panel">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Posición de la Línea en la Barra</span>
+            <span class="val-tag" id="sim-pos-val">7500 (Centro)</span>
+          </div>
+          <input type="range" id="sim-pos-slider" min="0" max="15000" value="7500" oninput="runLiveDecision()">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>Velocidad de Movimiento de Línea (&Delta;e)</span>
+            <span class="val-tag" id="sim-delta-val">0 (Estático)</span>
+          </div>
+          <input type="range" id="sim-delta-slider" min="-1500" max="1500" step="50" value="0" oninput="runLiveDecision()">
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <label style="font-size:0.85rem; display:flex; align-items:center; gap:0.4rem; cursor:pointer;">
+            <input type="checkbox" id="sim-line-lost" onchange="runLiveDecision()">
+            🚨 Simular Pérdida Total de Línea (line_lost)
+          </label>
+          <button class="cat-btn" style="padding:0.25rem 0.6rem; font-size:0.75rem;" onclick="centerLine()">
+            Centrar Línea
+          </button>
+        </div>
+
+        <!-- Barra Visual de Sensores -->
+        <div class="sensors-bar" id="sensors-container">
+          <!-- Generado dinámicamente -->
+        </div>
+
+        <!-- Salidas a Motores -->
+        <div class="motors-viz">
+          <div class="motor-card">
+            <div class="motor-title">MOTOR IZQUIERDO (PIN 11, 10, 9)</div>
+            <div class="motor-pwm" id="motor-left-pwm">180</div>
+            <div class="motor-dir dir-fwd" id="motor-left-dir">ADELANTE</div>
+            <div class="meter-bar">
+              <div class="meter-fill" id="meter-left" style="width: 70%; background: var(--accent-green);"></div>
+            </div>
+          </div>
+
+          <div class="motor-card">
+            <div class="motor-title">MOTOR DERECHO (PIN 3, 4, 5)</div>
+            <div class="motor-pwm" id="motor-right-pwm">180</div>
+            <div class="motor-dir dir-fwd" id="motor-right-dir">ADELANTE</div>
+            <div class="meter-bar">
+              <div class="meter-fill" id="meter-right" style="width: 70%; background: var(--accent-green);"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Banner de Decisión del Carro -->
+        <div class="decision-banner" id="decision-box">
+          <h4 id="decision-title">🟢 Trayectoria Recta Perfecta</h4>
+          <p id="decision-desc">
+            El error es 0. Ambos motores avanzan equilibrados a la velocidad base nominal sin corrección.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANCHO COMPLETO: GRÁFICO DINÁMICO DE RESPUESTA DE GIRO -->
+    <div class="card full-width">
+      <h2>📈 Curva de Respuesta de Motores vs Desviación (Evitar Sobregiro)</h2>
+      <canvas id="responseCanvas" width="1200" height="260"></canvas>
+      <div style="display:flex; justify-content:center; gap:2rem; font-size:0.8rem; margin-top:0.6rem; color:var(--text-muted);">
+        <span style="color:#38bdf8;">■ Corrección Total (C)</span>
+        <span style="color:#10b981;">■ Motor Izquierdo (PWM)</span>
+        <span style="color:#f59e0b;">■ Motor Derecho (PWM)</span>
+        <span style="color:#ef4444;">■ Límite de Frenado (-V_brake)</span>
+      </div>
+    </div>
+
+    <!-- ANCHO COMPLETO: COMPENDIO DE FÓRMULAS TEÓRICAS -->
+    <div class="card full-width">
+      <h2>📚 Resumen de Fórmulas Matemáticas de Calibración</h2>
+      
+      <div class="info-list">
+        <div class="info-item">
+          <h3>1. Ecuación del Error Proporcional</h3>
+          <p>
+            <span class="formula-badge">e[k] = Position[k] - SP</span><br>
+            Donde SP = 7500 en 16L y 3500 en 8L. Si la línea se mueve a la izquierda, e > 0; si se mueve a la derecha, e < 0.
+          </p>
+        </div>
+
+        <div class="info-item">
+          <h3>2. Corrección PD Discreta</h3>
+          <p>
+            <span class="formula-badge">C[k] = Kp &middot; e[k] + Kd &middot; (e[k] - e[k-1])</span><br>
+            El término derivativo actúa como un freno predictivo proporcional a la velocidad de escape de la línea.
+          </p>
+        </div>
+
+        <div class="info-item">
+          <h3>3. Deceleración Dinámica en Curva</h3>
+          <p>
+            <span class="formula-badge">V_base_din = V_base - ((|e| - e_curva) &middot; (V_base / 2)) / rango</span><br>
+            Reduce el centro de inercia a la mitad en curvas cerradas para evitar derrape centrífugo.
+          </p>
+        </div>
+
+        <div class="info-item">
+          <h3>4. Criterio Anti-Sobregiro de Kp</h3>
+          <p>
+            <span class="formula-badge">Kp &le; (V_max + V_brake) / (2 &middot; PasoSensor)</span><br>
+            Impide que una oscilación de 1 sensor sature ambos motores y desestabilice el chasis.
+          </p>
+        </div>
+
+        <div class="info-item">
+          <h3>5. Razón de Amortiguamiento Crítico (&alpha;)</h3>
+          <p>
+            <span class="formula-badge">Kd = &alpha; &middot; Kp  (&alpha; &approx; 15 a 22 en 16L)</span><br>
+            Por debajo de 12 se produce coleo continuo. Por encima de 26, el ruido analógico produce vibración espasmódica.
+          </p>
+        </div>
+
+        <div class="info-item">
+          <h3>6. Decisión en Pérdida de Línea</h3>
+          <p>
+            <span class="formula-badge">last_error > 0 &rarr; (-V_brake, V_base)</span><br>
+            Aplica pivote ciego reactivo sobre su propio eje recordando el último borde detectado.
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let currentCategory = 'IM_16';
+    let setpoint = 7500;
+    let maxPos = 15000;
+    let numSensors = 16;
+    let curveThreshold = 2000;
+    let curveRange = 5500;
+
+    function setCategory(cat) {
+      currentCategory = cat;
+      const b16 = document.getElementById('btn-im16');
+      const b8 = document.getElementById('btn-codex8');
+      const posSlider = document.getElementById('sim-pos-slider');
+
+      if (cat === 'IM_16') {
+        b16.classList.add('active');
+        b8.classList.remove('active');
+        setpoint = 7500;
+        maxPos = 15000;
+        numSensors = 16;
+        curveThreshold = 2000;
+        curveRange = 5500;
+        posSlider.max = 15000;
+        posSlider.value = 7500;
+        document.getElementById('input-kp').value = '0.2400';
+        document.getElementById('input-kd').value = '4.200';
+      } else {
+        b8.classList.add('active');
+        b16.classList.remove('active');
+        setpoint = 3500;
+        maxPos = 7000;
+        numSensors = 8;
+        curveThreshold = 933;
+        curveRange = 2567;
+        posSlider.max = 7000;
+        posSlider.value = 3500;
+        document.getElementById('input-kp').value = '0.3800';
+        document.getElementById('input-kd').value = '5.200';
+      }
+
+      renderSensors();
+      updateCalcs();
+    }
+
+    function renderSensors() {
+      const container = document.getElementById('sensors-container');
+      container.innerHTML = '';
+      for (let i = 0; i < numSensors; i++) {
+        const div = document.createElement('div');
+        div.className = 'sensor-item';
+        div.id = `sensor-${i}`;
+        if (numSensors === 16 && (i === 7 || i === 8)) div.classList.add('center-mark');
+        if (numSensors === 8 && (i === 3 || i === 4)) div.classList.add('center-mark');
+        container.appendChild(div);
+      }
+    }
+
+    function syncKp() {
+      const val = parseFloat(document.getElementById('input-kp').value) || 0.01;
+      document.getElementById('val-kp').innerText = val.toFixed(4);
+      updateCalcs();
+    }
+
+    function syncKd() {
+      const val = parseFloat(document.getElementById('input-kd').value) || 0.1;
+      document.getElementById('val-kd').innerText = val.toFixed(3);
+      updateCalcs();
+    }
+
+    function centerLine() {
+      document.getElementById('sim-pos-slider').value = setpoint;
+      document.getElementById('sim-delta-slider').value = 0;
+      document.getElementById('sim-line-lost').checked = false;
+      runLiveDecision();
+    }
+
+    function updateCalcs() {
+      const vBase = parseInt(document.getElementById('slider-base').value);
+      const vMax = parseInt(document.getElementById('slider-max').value);
+      const vBrake = parseInt(document.getElementById('slider-brake').value);
+      const kp = parseFloat(document.getElementById('input-kp').value) || 0.01;
+      const kd = parseFloat(document.getElementById('input-kd').value) || 0.1;
+      const nCrit = parseFloat(document.getElementById('slider-crit').value);
+
+      document.getElementById('val-base').innerText = vBase;
+      document.getElementById('val-max').innerText = vMax;
+      document.getElementById('val-brake').innerText = vBrake;
+      document.getElementById('val-crit').innerText = nCrit.toFixed(1);
+
+      // Kp Mínimo:
+      const kpMin = ((vBase / 2) + vBrake) / (setpoint);
+      // Kp Nominal: Satura a nCrit sensores de desviación
+      const distCrit = nCrit * 1000;
+      const kpNom = ((vBase / 2) + vBrake) / distCrit;
+      // Kp Máximo Seguro:
+      const kpMax = (vMax + vBrake) / 1000;
+
+      document.getElementById('res-kp-min').innerText = kpMin.toFixed(4);
+      document.getElementById('res-kp-nom').innerText = kpNom.toFixed(4);
+      document.getElementById('res-kp-max').innerText = kpMax.toFixed(4);
+
+      // Ratio Kd / Kp
+      const ratio = kd / kp;
+      document.getElementById('res-ratio').innerText = ratio.toFixed(2);
+
+      const badge = document.getElementById('res-damping-badge');
+      if (ratio < 11.0) {
+        badge.className = 'status-badge badge-danger';
+        badge.innerText = 'SUBAMORTIGUADO (COLEO / ZIGZAGUEO)';
+      } else if (ratio > 26.0) {
+        badge.className = 'status-badge badge-warning';
+        badge.innerText = 'SOBREAMORTIGUADO (VIBRACIÓN DE MOTORES)';
+      } else {
+        badge.className = 'status-badge badge-optimal';
+        badge.innerText = 'ÓPTIMO (CRÍTICAMENTE AMORTIGUADO)';
+      }
+
+      // Error que activa reversa en rueda interna: V_base_din - (Kp * e) < 0 => e > V_base_din / Kp
+      const errRev = Math.round(vBase / kp);
+      document.getElementById('res-rev-err').innerText = `|e| > ${errRev} pts (~${(errRev/1000).toFixed(1)} sensores)`;
+
+      // Error de saturación total:
+      const errSat = Math.round((vBase + vBrake) / kp);
+      document.getElementById('res-sat-err').innerText = `|e| > ${errSat} pts (~${(errSat/1000).toFixed(1)} sensores)`;
+
+      runLiveDecision();
+      drawChart();
+    }
+
+    function runLiveDecision() {
+      const linePos = parseInt(document.getElementById('sim-pos-slider').value);
+      const deltaE = parseInt(document.getElementById('sim-delta-slider').value);
+      const lineLost = document.getElementById('sim-line-lost').checked;
+
+      const vBase = parseInt(document.getElementById('slider-base').value);
+      const vMax = parseInt(document.getElementById('slider-max').value);
+      const vBrake = parseInt(document.getElementById('slider-brake').value);
+      const kp = parseFloat(document.getElementById('input-kp').value) || 0.01;
+      const kd = parseFloat(document.getElementById('input-kd').value) || 0.1;
+
+      document.getElementById('sim-pos-val').innerText = `${linePos} (Error: ${linePos - setpoint})`;
+      document.getElementById('sim-delta-val').innerText = `${deltaE} pts/ciclo`;
+
+      // Actualizar visualizador de sensores
+      for (let i = 0; i < numSensors; i++) {
+        const item = document.getElementById(`sensor-${i}`);
+        if (!item) continue;
+        const sPos = i * 1000;
+        const dist = Math.abs(sPos - linePos);
+        if (!lineLost && dist < 1200) {
+          const intensity = Math.max(10, Math.round(100 * Math.exp(-(dist * dist) / (2 * 450 * 450))));
+          item.style.height = `${intensity}%`;
+          item.classList.add('active');
+        } else {
+          item.style.height = '10%';
+          item.classList.remove('active');
+        }
+      }
+
+      const decisionTitle = document.getElementById('decision-title');
+      const decisionDesc = document.getElementById('decision-desc');
+      const decisionBox = document.getElementById('decision-box');
+
+      let leftPWM = 0;
+      let rightPWM = 0;
+
+      if (lineLost) {
+        const lastErr = linePos - setpoint;
+        if (lastErr >= 0) {
+          // Línea perdida por la izquierda: pivote rápido a la izquierda
+          leftPWM = -vBrake;
+          rightPWM = vBase;
+          decisionTitle.innerText = '🚨 PÉRDIDA DE LÍNEA: PIVOTE CIEGO A LA IZQUIERDA';
+          decisionDesc.innerText = `Ningún sensor detecta la línea. Como last_error (${lastErr}) > 0, el carro recuerda que se escapó por la izquierda y clava la rueda izquierda a reversa (-${vBrake}) mientras la derecha empuja a ${vBase}.`;
+          decisionBox.style.borderLeftColor = 'var(--accent-red)';
+        } else {
+          leftPWM = vBase;
+          rightPWM = -vBrake;
+          decisionTitle.innerText = '🚨 PÉRDIDA DE LÍNEA: PIVOTE CIEGO A LA DERECHA';
+          decisionDesc.innerText = `Ningún sensor detecta la línea. Como last_error (${lastErr}) < 0, el carro recuerda que se escapó por la derecha y clava la rueda derecha a reversa (-${vBrake}) mientras la izquierda empuja a ${vBase}.`;
+          decisionBox.style.borderLeftColor = 'var(--accent-red)';
+        }
+      } else {
+        const error = linePos - setpoint;
+        const pTerm = error * kp;
+        const dTerm = deltaE * kd;
+        const correction = Math.round(pTerm + dTerm);
+
+        // Deceleración dinámica
+        const absErr = Math.abs(error);
+        let curBase = vBase;
+        if (absErr > curveThreshold && curveRange > 0) {
+          const red = Math.round(((absErr - curveThreshold) * (vBase / 2)) / curveRange);
+          curBase = Math.max(60, vBase - red);
+        }
+
+        leftPWM = curBase - correction;
+        rightPWM = curBase + correction;
+
+        leftPWM = Math.max(-vBrake, Math.min(vMax, leftPWM));
+        rightPWM = Math.max(-vBrake, Math.min(vMax, rightPWM));
+
+        if (Math.abs(error) < 150 && Math.abs(deltaE) < 100) {
+          decisionTitle.innerText = '🟢 Recta Estable / Zona Muerta de Calma';
+          decisionDesc.innerText = `Error despreciable (${error} pts). Motores simétricos a velocidad crucero nominal (${leftPWM} PWM). Sin sobrecalentamiento ni oscilaciones.`;
+          decisionBox.style.borderLeftColor = 'var(--accent-green)';
+        } else if (absErr > curveThreshold) {
+          const side = error > 0 ? 'IZQUIERDA' : 'DERECHA';
+          decisionTitle.innerText = `🟡 Curva Cerrada a la ${side} (Deceleración Activa)`;
+          decisionDesc.innerText = `Error elevado (${error} pts > umbral ${curveThreshold}). Velocidad base reducida dinámicamente de ${vBase} a ${curBase} PWM para bajar inercia. Corrección PD total: ${correction}. Rueda interior en ${error > 0 ? leftPWM : rightPWM} PWM.`;
+          decisionBox.style.borderLeftColor = 'var(--accent-yellow)';
+        } else {
+          const side = error > 0 ? 'Izquierda' : 'Derecha';
+          decisionTitle.innerText = `🔵 Corrección Suave en Recta/Curva hacia la ${side}`;
+          decisionDesc.innerText = `Desviación leve (${error} pts). Diferencial de giro aplicado proporcionalmente: P=${pTerm.toFixed(1)}, D=${dTerm.toFixed(1)}, Corrección=${correction}.`;
+          decisionBox.style.borderLeftColor = 'var(--accent-blue)';
+        }
+      }
+
+      // Actualizar tarjeta motores
+      updateMotorCard('left', leftPWM, vMax, vBrake);
+      updateMotorCard('right', rightPWM, vMax, vBrake);
+    }
+
+    function updateMotorCard(side, pwm, vMax, vBrake) {
+      const pwmElem = document.getElementById(`motor-${side}-pwm`);
+      const dirElem = document.getElementById(`motor-${side}-dir`);
+      const meter = document.getElementById(`meter-${side}`);
+
+      pwmElem.innerText = Math.abs(pwm);
+
+      if (pwm > 0) {
+        dirElem.innerText = 'ADELANTE';
+        dirElem.className = 'motor-dir dir-fwd';
+        meter.style.width = `${(pwm / vMax) * 100}%`;
+        meter.style.background = 'var(--accent-green)';
+      } else if (pwm < 0) {
+        dirElem.innerText = 'REVERSA (FRENO ACTIVO)';
+        dirElem.className = 'motor-dir dir-rev';
+        meter.style.width = `${(Math.abs(pwm) / vBrake) * 100}%`;
+        meter.style.background = 'var(--accent-red)';
+      } else {
+        dirElem.innerText = 'DETENIDO (0)';
+        dirElem.className = 'motor-dir dir-stop';
+        meter.style.width = '0%';
+      }
+    }
+
+    function drawChart() {
+      const canvas = document.getElementById('responseCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      const vBase = parseInt(document.getElementById('slider-base').value);
+      const vMax = parseInt(document.getElementById('slider-max').value);
+      const vBrake = parseInt(document.getElementById('slider-brake').value);
+      const kp = parseFloat(document.getElementById('input-kp').value) || 0.01;
+      const kd = parseFloat(document.getElementById('input-kd').value) || 0.1;
+
+      // Eje central
+      const zeroY = h * 0.72;
+      const zeroX = w / 2;
+
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, zeroY);
+      ctx.lineTo(w, zeroY);
+      ctx.moveTo(zeroX, 0);
+      ctx.lineTo(zeroX, h);
+      ctx.stroke();
+
+      // Línea de límite -vBrake
+      const brakeY = zeroY + (vBrake / 255) * (h * 0.45);
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)';
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(0, brakeY);
+      ctx.lineTo(w, brakeY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      const points = 150;
+      const maxErr = setpoint;
+
+      // Curva Motor Izquierdo (Verde)
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let i = 0; i <= points; i++) {
+        const err = -maxErr + (i / points) * (2 * maxErr);
+        let curBase = vBase;
+        const absErr = Math.abs(err);
+        if (absErr > curveThreshold && curveRange > 0) {
+          const red = Math.round(((absErr - curveThreshold) * (vBase / 2)) / curveRange);
+          curBase = Math.max(60, vBase - red);
+        }
+        const corr = err * kp;
+        let left = Math.max(-vBrake, Math.min(vMax, curBase - corr));
+
+        const x = (i / points) * w;
+        const y = zeroY - (left / 255) * (h * 0.55);
+
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // Curva Motor Derecho (Ámbar)
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let i = 0; i <= points; i++) {
+        const err = -maxErr + (i / points) * (2 * maxErr);
+        let curBase = vBase;
+        const absErr = Math.abs(err);
+        if (absErr > curveThreshold && curveRange > 0) {
+          const red = Math.round(((absErr - curveThreshold) * (vBase / 2)) / curveRange);
+          curBase = Math.max(60, vBase - red);
+        }
+        const corr = err * kp;
+        let right = Math.max(-vBrake, Math.min(vMax, curBase + corr));
+
+        const x = (i / points) * w;
+        const y = zeroY - (right / 255) * (h * 0.55);
+
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // Etiquetas
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px sans-serif';
+      ctx.fillText('-Error Máx (Derecha)', 10, zeroY - 6);
+      ctx.fillText('+Error Máx (Izquierda)', w - 130, zeroY - 6);
+      ctx.fillText('0 (Centro)', zeroX + 6, zeroY - 6);
+      ctx.fillText('-V_brake (Freno)', 10, brakeY - 4);
+    }
+
+    // Inicializar
+    renderSensors();
+    updateCalcs();
+  </script>
+</body>
+</html>
