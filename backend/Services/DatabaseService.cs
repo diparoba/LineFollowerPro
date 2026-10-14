@@ -51,19 +51,19 @@ public class DatabaseService
             }
         }
 
-        if (!columns.Contains("car_name"))
+        if (!columns.Any(c => c.Equals("car_name", StringComparison.OrdinalIgnoreCase)))
         {
             using var alterCmd = new SqliteCommand("ALTER TABLE profiles ADD COLUMN car_name TEXT NOT NULL DEFAULT 'Carro 1';", connection);
             alterCmd.ExecuteNonQuery();
         }
 
-        if (!columns.Contains("car_category"))
+        if (!columns.Any(c => c.Equals("car_category", StringComparison.OrdinalIgnoreCase)))
         {
             using var alterCmd = new SqliteCommand("ALTER TABLE profiles ADD COLUMN car_category TEXT NOT NULL DEFAULT 'IM_16';", connection);
             alterCmd.ExecuteNonQuery();
         }
 
-        if (!columns.Contains("reflective_mode"))
+        if (!columns.Any(c => c.Equals("reflective_mode", StringComparison.OrdinalIgnoreCase)))
         {
             using var alterCmd = new SqliteCommand("ALTER TABLE profiles ADD COLUMN reflective_mode INTEGER NOT NULL DEFAULT 0;", connection);
             alterCmd.ExecuteNonQuery();
@@ -84,14 +84,16 @@ public class DatabaseService
         var presets = new[]
         {
             // Perfiles para 16 Líneas (Ingeniero Maker)
-            new RobotProfile { Name = "Pista Rápida (16L)", CarName = "Carro IM-1", CarCategory = "IM_16", Kp = 0.20f, Kd = 3.5f, BaseSpeed = 200, MaxSpeed = 255, BrakeSpeed = 120, ForkMode = 0, LineColor = 0 },
-            new RobotProfile { Name = "Pista Técnica (16L)", CarName = "Carro IM-1", CarCategory = "IM_16", Kp = 0.28f, Kd = 4.8f, BaseSpeed = 160, MaxSpeed = 220, BrakeSpeed = 150, ForkMode = 0, LineColor = 0 },
-            new RobotProfile { Name = "Bifurcación Izq (16L)", CarName = "Carro IM-2", CarCategory = "IM_16", Kp = 0.24f, Kd = 4.2f, BaseSpeed = 170, MaxSpeed = 230, BrakeSpeed = 130, ForkMode = 1, LineColor = 0 },
+            new RobotProfile { Name = "Pista Rápida (16L)", CarName = "Carro IM-1", CarCategory = "IM_16", Kp = 0.20f, Kd = 3.5f, BaseSpeed = 200, MaxSpeed = 255, BrakeSpeed = 120, ForkMode = 0, LineColor = 0, ReflectiveMode = 0 },
+            new RobotProfile { Name = "Pista Técnica (16L)", CarName = "Carro IM-1", CarCategory = "IM_16", Kp = 0.28f, Kd = 4.8f, BaseSpeed = 160, MaxSpeed = 220, BrakeSpeed = 150, ForkMode = 0, LineColor = 0, ReflectiveMode = 0 },
+            new RobotProfile { Name = "Bifurcación Izq (16L)", CarName = "Carro IM-2", CarCategory = "IM_16", Kp = 0.24f, Kd = 4.2f, BaseSpeed = 170, MaxSpeed = 230, BrakeSpeed = 130, ForkMode = 1, LineColor = 0, ReflectiveMode = 0 },
+            new RobotProfile { Name = "Piso Reflectante (16L)", CarName = "Carro IM-1", CarCategory = "IM_16", Kp = 0.22f, Kd = 3.8f, BaseSpeed = 175, MaxSpeed = 235, BrakeSpeed = 135, ForkMode = 0, LineColor = 0, ReflectiveMode = 1 },
             
             // Perfiles para 8 Líneas (Codex)
-            new RobotProfile { Name = "Pista Rápida (8L Codex)", CarName = "Carro Codex-1", CarCategory = "CODEX_8", Kp = 0.35f, Kd = 5.0f, BaseSpeed = 190, MaxSpeed = 255, BrakeSpeed = 125, ForkMode = 0, LineColor = 0 },
-            new RobotProfile { Name = "Pista Técnica (8L Codex)", CarName = "Carro Codex-1", CarCategory = "CODEX_8", Kp = 0.45f, Kd = 6.5f, BaseSpeed = 150, MaxSpeed = 210, BrakeSpeed = 145, ForkMode = 0, LineColor = 0 },
-            new RobotProfile { Name = "Bifurcación Der (8L Codex)", CarName = "Carro Codex-2", CarCategory = "CODEX_8", Kp = 0.38f, Kd = 5.2f, BaseSpeed = 170, MaxSpeed = 220, BrakeSpeed = 130, ForkMode = 2, LineColor = 0 }
+            new RobotProfile { Name = "Pista Rápida (8L Codex)", CarName = "Carro Codex-1", CarCategory = "CODEX_8", Kp = 0.35f, Kd = 5.0f, BaseSpeed = 190, MaxSpeed = 255, BrakeSpeed = 125, ForkMode = 0, LineColor = 0, ReflectiveMode = 0 },
+            new RobotProfile { Name = "Pista Técnica (8L Codex)", CarName = "Carro Codex-1", CarCategory = "CODEX_8", Kp = 0.45f, Kd = 6.5f, BaseSpeed = 150, MaxSpeed = 210, BrakeSpeed = 145, ForkMode = 0, LineColor = 0, ReflectiveMode = 0 },
+            new RobotProfile { Name = "Bifurcación Der (8L Codex)", CarName = "Carro Codex-2", CarCategory = "CODEX_8", Kp = 0.38f, Kd = 5.2f, BaseSpeed = 170, MaxSpeed = 220, BrakeSpeed = 130, ForkMode = 2, LineColor = 0, ReflectiveMode = 0 },
+            new RobotProfile { Name = "Piso Reflectante (8L Codex)", CarName = "Carro Codex-1", CarCategory = "CODEX_8", Kp = 0.38f, Kd = 5.5f, BaseSpeed = 170, MaxSpeed = 230, BrakeSpeed = 135, ForkMode = 0, LineColor = 0, ReflectiveMode = 1 }
         };
 
         foreach (var p in presets)

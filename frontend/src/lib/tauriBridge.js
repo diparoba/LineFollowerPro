@@ -117,6 +117,9 @@ export async function disconnectSerial() {
 
 // Enviar parámetros de control PID
 export async function sendPid(config) {
+  const reflectiveVal = Number(
+    config.reflectiveMode !== undefined ? config.reflectiveMode : (config.reflective || 0)
+  );
   if (isTauri()) {
     const success = await invoke('send_pid', {
       kp: Number(config.kp),
@@ -126,7 +129,7 @@ export async function sendPid(config) {
       brakeSpeed: Number(config.brakeSpeed),
       forkMode: Number(config.forkMode),
       lineColor: Number(config.lineColor),
-      reflective: Number(config.reflectiveMode || 0)
+      reflective: reflectiveVal
     });
     return { success };
   } else {
@@ -134,14 +137,14 @@ export async function sendPid(config) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        kp: config.kp,
-        kd: config.kd,
-        baseSpeed: config.baseSpeed,
-        maxSpeed: config.maxSpeed,
-        brakeSpeed: config.brakeSpeed,
-        forkMode: config.forkMode,
-        lineColor: config.lineColor,
-        reflectiveMode: Number(config.reflectiveMode || 0)
+        kp: Number(config.kp),
+        kd: Number(config.kd),
+        baseSpeed: Number(config.baseSpeed),
+        maxSpeed: Number(config.maxSpeed),
+        brakeSpeed: Number(config.brakeSpeed),
+        forkMode: Number(config.forkMode),
+        lineColor: Number(config.lineColor),
+        reflectiveMode: reflectiveVal
       })
     });
     return await res.json();
@@ -202,6 +205,9 @@ export async function getProfiles(category = null, carName = null) {
 }
 
 export async function saveProfile(profile) {
+  const reflectiveVal = Number(
+    profile.reflectiveMode !== undefined ? profile.reflectiveMode : (profile.reflective || 0)
+  );
   if (isTauri()) {
     return await invoke('save_profile', {
       profile: {
@@ -216,7 +222,7 @@ export async function saveProfile(profile) {
         brakeSpeed: Number(profile.brakeSpeed),
         forkMode: Number(profile.forkMode),
         lineColor: Number(profile.lineColor),
-        reflectiveMode: Number(profile.reflectiveMode || 0),
+        reflectiveMode: reflectiveVal,
         createdAt: profile.createdAt || null
       }
     });
@@ -224,7 +230,10 @@ export async function saveProfile(profile) {
     const res = await fetch(`${HTTP_API_URL}/api/profiles`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(profile)
+      body: JSON.stringify({
+        ...profile,
+        reflectiveMode: reflectiveVal
+      })
     });
     return await res.json();
   }

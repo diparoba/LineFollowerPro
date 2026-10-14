@@ -208,17 +208,38 @@
     }
   }
 
-  async function handleSaveEEPROM() {
+  function handleChangeReflective(e) {
+    const mode = e.detail;
+    config = { ...config, reflectiveMode: mode };
+  }
+
+  async function handleSaveEEPROM(e) {
     eepromStatus = { type: 'loading', message: 'Escribiendo y verificando en memoria EEPROM del robot...', details: '' };
     try {
+      if (e && e.detail) {
+        config = { ...config, ...e.detail };
+      }
+      if (isConnected) {
+        // Enviar parámetros completos a RAM antes de ordenar la grabación física
+        await bridgeSendPid(config);
+        await new Promise(r => setTimeout(r, 80));
+      }
       const data = await bridgeSaveEeprom();
       if (data.success) {
+        const detailsStr = data.data || '';
+        let surfaceStr = config.reflectiveMode === 1 ? '✨ Piso Reflectante' : 'Piso Normal (Mate)';
+        if (detailsStr.includes('$EEPROM_OK,SAVED')) {
+          const parts = detailsStr.replace('$EEPROM_OK,SAVED,', '').trim().split(',');
+          if (parts.length >= 8) {
+            surfaceStr = parseInt(parts[7]) === 1 ? '✨ Piso Reflectante' : 'Piso Normal (Mate)';
+          }
+        }
         eepromStatus = {
           type: 'success',
-          message: '¡Confirmado! Datos grabados y verificados en la memoria física del robot.',
-          details: data.data || 'Lectura de verificación coincidente al 100%'
+          message: '¡Confirmado! Configuración grabada y verificada en la memoria EEPROM física.',
+          details: `Superficie: ${surfaceStr} | Kp=${config.kp.toFixed(4)} | Kd=${config.kd.toFixed(4)} | Base=${config.baseSpeed} | Freno=${config.brakeSpeed}`
         };
-        statusMessage = 'EEPROM: Guardado y verificado con éxito (LED 13 destelló 3 veces).';
+        statusMessage = `EEPROM grabada: Kp=${config.kp.toFixed(4)}, Kd=${config.kd.toFixed(4)}, Superficie=${surfaceStr}`;
       } else {
         eepromStatus = {
           type: 'error',
@@ -535,18 +556,19 @@
       <!-- Columna 2: Sintonización PD & Dinámica -->
       <div class="grid-column col-tuning">
         <TuningPanel 
-          kp={config.kp} 
-          kd={config.kd} 
-          baseSpeed={config.baseSpeed} 
-          maxSpeed={config.maxSpeed} 
-          brakeSpeed={config.brakeSpeed} 
-          forkMode={config.forkMode} 
-          lineColor={config.lineColor} 
-          reflectiveMode={config.reflectiveMode}
+          bind:kp={config.kp} 
+          bind:kd={config.kd} 
+          bind:baseSpeed={config.baseSpeed} 
+          bind:maxSpeed={config.maxSpeed} 
+          bind:brakeSpeed={config.brakeSpeed} 
+          bind:forkMode={config.forkMode} 
+          bind:lineColor={config.lineColor} 
+          bind:reflectiveMode={config.reflectiveMode}
           {isConnected}
           {eepromStatus}
           {activeCarName}
           {activeCategory}
+          on:changeReflective={handleChangeReflective}
           on:sendPid={handleSendPid}
           on:saveEEPROM={handleSaveEEPROM}
           on:readEEPROM={handleReadEEPROM}

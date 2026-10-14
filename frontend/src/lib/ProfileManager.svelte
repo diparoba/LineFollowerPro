@@ -102,6 +102,9 @@
               </span>
               <span class="car-name-tag precision-mono">🚗 {p.carName || 'Carro 1'}</span>
               <span class="profile-name">{p.name}</span>
+              {#if p.reflectiveMode === 1}
+                <span class="reflective-tag precision-chip" title="Perfil configurado con filtro antirreflejos para pisos brillantes">✨ Reflectante</span>
+              {/if}
             </div>
             <div class="profile-meta precision-mono">
               <span>Sens (Kp): <strong>{(Number(p.kp) || 0).toFixed(4)}</strong></span>
@@ -109,6 +112,7 @@
               <span>Base: <strong>{p.baseSpeed}</strong></span>
               <span>Freno: <strong>{p.brakeSpeed}</strong></span>
               <span>Bifurc: <strong>{getForkName(p.forkMode)}</strong></span>
+              <span>Piso: <strong class="{p.reflectiveMode === 1 ? 'reflective-text' : ''}">{p.reflectiveMode === 1 ? '✨ Reflectante' : 'Mate'}</strong></span>
             </div>
           </div>
           <div class="profile-actions">
@@ -278,6 +282,19 @@
     font-weight: 700;
     color: var(--text-heading);
     font-size: 0.82rem;
+  }
+
+  .reflective-tag {
+    background: rgba(168, 85, 247, 0.18);
+    border: 1px solid rgba(168, 85, 247, 0.45);
+    color: #c084fc;
+    font-size: 0.64rem;
+    padding: 0.08rem 0.35rem;
+    font-weight: 700;
+  }
+
+  .reflective-text {
+    color: #c084fc;
   }
 
   .profile-meta {

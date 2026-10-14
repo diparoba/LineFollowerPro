@@ -75,10 +75,12 @@ impl DatabaseService {
             ("Pista Rápida (16L)", "Carro IM-1", "IM_16", 0.20f32, 3.5f32, 200, 255, 120, 0, 0, 0),
             ("Pista Técnica (16L)", "Carro IM-1", "IM_16", 0.28f32, 4.8f32, 160, 220, 150, 0, 0, 0),
             ("Bifurcación Izq (16L)", "Carro IM-2", "IM_16", 0.24f32, 4.2f32, 170, 230, 130, 1, 0, 0),
+            ("Piso Reflectante (16L)", "Carro IM-1", "IM_16", 0.22f32, 3.8f32, 175, 235, 135, 0, 0, 1),
             // 8 Líneas (Codex)
             ("Pista Rápida (8L Codex)", "Carro Codex-1", "CODEX_8", 0.35f32, 5.0f32, 190, 255, 125, 0, 0, 0),
             ("Pista Técnica (8L Codex)", "Carro Codex-1", "CODEX_8", 0.45f32, 6.5f32, 150, 210, 145, 0, 0, 0),
             ("Bifurcación Der (8L Codex)", "Carro Codex-2", "CODEX_8", 0.38f32, 5.2f32, 170, 220, 130, 2, 0, 0),
+            ("Piso Reflectante (8L Codex)", "Carro Codex-1", "CODEX_8", 0.38f32, 5.5f32, 170, 230, 135, 0, 0, 1),
         ];
 
         let now = chrono_now();

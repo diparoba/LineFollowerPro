@@ -1,0 +1,80 @@
+========================================================================
+LINEFOLLOWER PRO v1.2.1 - SUITE PORTABLE AUTÓNOMA & FLASHEADOR BLE / BT
+========================================================================
+
+Esta versión (v1.2.0) introduce una arquitectura multi-modelo para carros
+Bluetooth (Classic, BLE 4.2 y BLE 5.0), flasheo autónomo de microcontroladores
+desde escritorio y navegador, telemetría ultra-resiliente y recuperación avanzada
+de pista.
+
+CORRECCIÓN EN v1.2.1:
+------------------------------------------------------------------------
+- Corregido: el ejecutable de v1.2.0 intentaba cargar la interfaz desde un
+  servidor de desarrollo (http://localhost:5173) y mostraba el error
+  'localhost rechazó la conexión'. Ahora la interfaz va embebida en el
+  .exe y funciona 100% sin internet ni servidores externos.
+
+NOVEDADES Y CAMBIOS EN v1.2.0:
+------------------------------------------------------------------------
+1. SOPORTE DE MICROCONTROLADORES BLE & ESP32-S3:
+   - Nuevo soporte para ESP32-S3 DevKit 2022 v1.3 con Bluetooth Low Energy 5.0.
+   - Indicador visual LED Neopixel RGB integrado en GPIO 48 con pulsos activos
+     al recibir comandos desde la aplicación móvil / consola.
+   - Nuevo firmware BLE 4.2 para placas ESP32 DevKit V1, compatible directamente
+     con iPhone / iOS y Android sin necesidad de emparejamiento manual SPP previo.
+   - Firmware Bluetooth Classic SPP para ESP32 DevKit V1 actualizado con tabla
+     de velocidad escalonada calibrada:
+       * Comandos '0' a '9': [60, 70, 80, 90, 100, 130, 160, 190, 220, 255]
+       * Diseñado para vencer la fricción estática sin perder par motor a baja velocidad.
+   - Refuerzo de corriente GPIO (Drive Strength Cap 3 ~20mA) en los pines TB6612FNG
+     (GPIO 33 y GPIO 19) para prevenir caídas de tensión inductivas.
+
+2. MODO PISTA REFLECTANTE Y RECUPERACIÓN DE BIFURCACIONES:
+   - Algoritmo en firmware para pistas con fondo reflectante/brillante o línea invertida.
+   - Estrategia de recuperación robusta de bifurcaciones y cruces en ángulo recto.
+   - Configuración sincronizable en tiempo real vía telemetría y perfiles SQLite.
+
+3. INTERFAZ RESPONSIVE CON PROTECCIÓN ANTI-COLAPSO:
+   - Encabezado y barra de control serial elástica con altura mínima intrínseca y
+     flex-shrink desactivado, garantizando que los selectores COM, baudios y botones
+     de conexión nunca queden ocultos ni comprimidos en laptops (DPI 125%-150%).
+   - Scroll vertical independiente en el área de trabajo para resoluciones compactas.
+
+4. TELEMETRÍA RESILIENTE Y FLASHEO WEB INTEGRADO:
+   - Reconexión WebSocket con retroceso exponencial (exponential backoff) para
+     evitar saturación de la consola en caso de pérdida de red o reinicio del proxy.
+   - Indicador visual de estado offline y botón de reintento manual de conexión.
+   - Flasheador Web Serial en navegador para placas ESP32 y ESP32-S3.
+   - Detección de entorno con advertencias claras para flasheo de Arduino Nano vía avrdude.
+
+5. PERSISTENCIA AUTÓNOMA Y HERRAMIENTAS OFFLINE:
+   - Base de datos local SQLite (follower.db) portátil.
+   - Suite de herramientas avrdude preconfigurada con librerías libusb.
+   - Instalador de driver USB CH340 incluido en resources/drivers/.
+
+INSTRUCCIONES DE USO:
+------------------------------------------------------------------------
+1. Ejecuta "LineFollowerPro.exe" directamente desde esta carpeta o una memoria USB.
+2. No requiere conexión a Internet ni instalación previa de Python, Node.js ni Rust.
+3. Para conectar tu Seguidor de Línea:
+   - Conecta tu Arduino Nano por USB.
+   - Selecciona el puerto COM correspondiente y pulsa "Conectar Serial".
+   - La telemetría en tiempo real y el monitoreo de 16/8 sensores se activarán de inmediato.
+4. Para flashear tu ESP32 / ESP32-S3:
+   - Abre el panel lateral "🛠️ Hardware & Flasher" y ve a la pestaña "🚗 Carro BT ESP32".
+   - Selecciona el modelo deseado:
+       * ESP32 DevKit V1 (Bluetooth Classic)
+       * ESP32 DevKit V1 (BLE 4.2 • iOS / Android)
+       * ESP32-S3 DevKit 2022 v1.3 (BLE 5.0 • LED Pin 48)
+   - Asigna el nombre Bluetooth que desees (máx. 31 caracteres).
+   - Pulsa "Flashear Carro ESP32". Si tu placa lo requiere, mantén presionado BOOT
+     durante el inicio de la transferencia.
+
+HISTORIAL DE VERSIONES CONSERVADAS:
+------------------------------------------------------------------------
+- release_portable_v0.1.0-beta   : Primera versión alfa de telemetría.
+- release_desktop_v0.2.0-beta    : Versión beta de escritorio Tauri.
+- release_desktop_v1.0.0         : Versión 1.0 con soporte 16L/8L y auto-tuning.
+- release_desktop_v1.1.0         : Versión 1.1 con sintonización de alta precisión y ESP32 BT.
+- release_desktop_v1.2.0         : Versión 1.2 (OBSOLETA: requería servidor de desarrollo).
+- release_desktop_v1.2.1         : Versión 1.2.1 con interfaz embebida, 100% offline.

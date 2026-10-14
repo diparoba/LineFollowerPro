@@ -34,7 +34,21 @@
   }
 
   function handleSaveEEPROM() {
-    dispatch('saveEEPROM');
+    dispatch('saveEEPROM', {
+      kp,
+      kd,
+      baseSpeed,
+      maxSpeed,
+      brakeSpeed,
+      forkMode,
+      lineColor,
+      reflectiveMode
+    });
+  }
+
+  function setReflectiveMode(mode) {
+    reflectiveMode = mode;
+    dispatch('changeReflective', mode);
   }
 
   function handleReadEEPROM() {
@@ -199,12 +213,12 @@
       <div class="pill-selector">
         <button 
           class="pill {reflectiveMode === 0 ? 'selected' : ''}" 
-          on:click={() => reflectiveMode = 0}
+          on:click={() => setReflectiveMode(0)}
           title="Filtro estándar lineal para pistas sin brillo"
         >Piso Normal (Mate)</button>
         <button 
           class="pill {reflectiveMode === 1 ? 'selected' : ''}" 
-          on:click={() => reflectiveMode = 1}
+          on:click={() => setReflectiveMode(1)}
           title="Noise gate, supresión de destellos de coliseo y ventana espacial"
         >✨ Piso Reflectante</button>
       </div>
