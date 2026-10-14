@@ -9,6 +9,7 @@
     subscribeFlashLogs,
     getPorts,
     isTauri,
+    isRemoteWebHost,
     isWebSerialSupported,
     requestWebSerialPort,
     getActiveWebSerialPort
@@ -19,6 +20,7 @@
   export let currentPort = '';
   export let currentCategory = 'IM_16';
 
+  let isRemoteHost = isRemoteWebHost();
   let activeTab = 'flasher'; // 'flasher' | 'pinout' | 'drivers' | 'esp32'
   let pinoutModel = currentCategory; // 'IM_16' | 'CODEX_8'
 
@@ -105,6 +107,20 @@
   }
 
   async function handleFlash() {
+    if (isRemoteHost) {
+      flashStatus = {
+        type: 'error',
+        message: 'El flasheo de Arduino Nano vía avrdude requiere acceso local al hardware USB. Utiliza la versión de escritorio nativa (LineFollowerPro.exe) o el backend local.'
+      };
+      flashLogs = [
+        ...flashLogs,
+        `[AVISO] Servidor web remoto detectado (${window.location.hostname}).`,
+        `[AVISO] avrdude no puede acceder a puertos USB locales a través de internet.`,
+        `[SOLUCIÓN] Utiliza LineFollowerPro.exe en tu PC o usa la pestaña '🚗 Carro BT ESP32' que soporta Web Serial directamente en el navegador.`
+      ];
+      return;
+    }
+
     if (!selectedPort) {
       flashStatus = { type: 'error', message: 'Selecciona un puerto COM antes de flashear.' };
       return;
@@ -124,8 +140,9 @@
         flashStatus = { type: 'error', message: res.message };
       }
     } catch (e) {
-      flashStatus = { type: 'error', message: e.toString() };
-      flashLogs = [...flashLogs, `[ERROR] ${e.toString()}`];
+      const msg = e.message || e.toString();
+      flashStatus = { type: 'error', message: msg };
+      flashLogs = [...flashLogs, `[ERROR] ${msg}`];
     } finally {
       isFlashing = false;
     }
@@ -353,6 +370,22 @@
     <div class="drawer-content">
       {#if activeTab === 'flasher'}
         <div class="tab-pane">
+          {#if isRemoteHost}
+            <div class="remote-host-alert">
+              <span class="alert-icon">⚠️</span>
+              <div class="alert-content">
+                <strong>Servidor Web Remoto Detectado</strong>
+                <p>
+                  El flasheo de Arduino Nano utiliza el grabador de bajo nivel <code>avrdude</code>, el cual opera directamente sobre los puertos USB locales de tu equipo.
+                  Para flashear seguidores Nano, descarga y ejecuta la <strong>versión de escritorio nativa (<a href="/downloads/LineFollowerPro.exe" target="_blank" download>LineFollowerPro.exe</a>)</strong> o el backend local.
+                </p>
+                <div class="alert-tip">
+                  💡 <em>Nota: Si tienes un ESP32 o ESP32-S3, puedes flashearlo 100% en este navegador desde la pestaña <strong>"🚗 Carro BT ESP32"</strong> usando Web Serial.</em>
+                </div>
+              </div>
+            </div>
+          {/if}
+
           <div class="section-card">
             <h3>Selección de Firmware</h3>
             <div class="robot-selector">
@@ -2325,5 +2358,44 @@
     background: rgba(168, 85, 247, 0.2);
     color: #c084fc;
     border: 1px solid rgba(168, 85, 247, 0.4);
+  }
+
+  .remote-host-alert {
+    display: flex;
+    gap: 0.85rem;
+    padding: 0.95rem;
+    margin-bottom: 1.25rem;
+    border-radius: 8px;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    color: var(--text-primary, #e2e8f0);
+    font-size: 0.88rem;
+    line-height: 1.45;
+  }
+
+  .remote-host-alert .alert-icon {
+    font-size: 1.4rem;
+    line-height: 1;
+  }
+
+  .remote-host-alert strong {
+    color: #fbbf24;
+    display: block;
+    margin-bottom: 0.3rem;
+  }
+
+  .remote-host-alert p {
+    margin: 0 0 0.5rem 0;
+  }
+
+  .remote-host-alert a {
+    color: #38bdf8;
+    text-decoration: underline;
+    font-weight: 600;
+  }
+
+  .remote-host-alert .alert-tip {
+    font-size: 0.82rem;
+    color: #94a3b8;
   }
 </style>

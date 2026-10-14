@@ -6,7 +6,7 @@ Proporciona utilidades de hardware, flasheo autónomo de firmwares en microcontr
 ## Requirements
 
 ### Requirement: Firmware Flashing with Bootloader Auto-Fallback
-The system SHALL flash precompiled robot firmwares (`16L Ingeniero Maker` or `8L Codex`) to connected microcontrollers over serial ports using `avrdude` (both from native desktop and web browsers through the local API service), with configurable baud rates (115200 or 9600) and automatic fallback to alternate bootloader baud rates upon communication failure.
+The system SHALL flash precompiled robot firmwares (`16L Ingeniero Maker` or `8L Codex`) to connected microcontrollers over serial ports using `avrdude` (both from native desktop and web browsers through the local API service), with configurable baud rates (115200 or 9600), automatic fallback to alternate bootloader baud rates upon communication failure, and graceful environment validation when running in remote web browser contexts.
 
 #### Scenario: Successful firmware flash at selected baud rate
 - **WHEN** the user selects a target robot model, a COM port, and initiates the flashing process at 115200 baud
@@ -18,7 +18,11 @@ The system SHALL flash precompiled robot firmwares (`16L Ingeniero Maker` or `8L
 
 #### Scenario: Flashing Arduino Nano from the web browser
 - **WHEN** the user triggers the flash operation from the web interface
-- **THEN** the web client communicates with the local backend endpoint (`/api/firmware/flash`), receives streaming console logs in real time via WebSocket or server response, and displays progress in the terminal without requiring the native desktop application.
+- **THEN** the web client communicates with the backend endpoint (`/api/firmware/flash`), receives streaming console logs in real time via WebSocket or server response, and displays progress in the terminal.
+
+#### Scenario: Remote web host flasher restriction warning
+- **WHEN** the user attempts to flash an Arduino Nano via `avrdude` while accessing the dashboard from a remote web domain (such as `robotica.ouroboros-software.com`) where local COM ports are physically disconnected from the server
+- **THEN** the system intercepts the request or catches HTTP 405/network errors, displaying a clear actionable warning explaining that Arduino Nano `avrdude` flashing requires the native desktop application (`LineFollowerPro.exe`) or running the local companion backend (`http://localhost:5010`), while preserving in-browser Web Serial flashing for ESP32.
 
 ### Requirement: Interactive Hardware Pinout and Electrical Mapping
 The system SHALL render an interactive visual schematic and reference table of the Arduino Nano microcontroller connections for both the 16-channel multiplexed robot and the 8-channel direct analog robot.

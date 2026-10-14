@@ -43,6 +43,20 @@ export function isTauri() {
     (window.__TAURI_INTERNALS__ !== undefined || window.__TAURI__ !== undefined);
 }
 
+export function isRemoteWebHost() {
+  if (typeof window === 'undefined') return false;
+  if (isTauri()) return false;
+  const host = window.location.hostname;
+  return host !== 'localhost' && host !== '127.0.0.1' && host !== '0.0.0.0' && host !== '';
+}
+
+let reconnectWsManualFn = null;
+export function reconnectTelemetry() {
+  if (reconnectWsManualFn) {
+    reconnectWsManualFn();
+  }
+}
+
 // Escanear puertos seriales
 export async function getPorts() {
   if (isTauri()) {
@@ -240,8 +254,8 @@ export async function backupDatabase(filename) {
   }
 }
 
-// Suscripción a Telemetría en Vivo
-export function subscribeTelemetry(onTelemetry, onLog) {
+// Suscripción a Telemetría en Vivo con Retroceso Exponencial y Estado Offline
+export function subscribeTelemetry(onTelemetry, onLog, onStatusChange) {
   if (isTauri()) {
     let unlistenTel = null;
     let unlistenLog = null;
@@ -258,17 +272,63 @@ export function subscribeTelemetry(onTelemetry, onLog) {
       unlistenLog = unlisten;
     });
 
+    if (onStatusChange) onStatusChange({ connected: true, offline: false, retries: 0 });
+
     return () => {
       if (unlistenTel) unlistenTel();
       if (unlistenLog) unlistenLog();
     };
   } else {
-    // Modo Web con WebSocket
+    // Modo Web con WebSocket Resiliente
     let ws = null;
     let timer = null;
+    let retryCount = 0;
+    const MAX_RETRIES = 5;
+
+    function handleDisconnect() {
+      if (ws) {
+        try { ws.close(); } catch (_) {}
+        ws = null;
+      }
+      if (retryCount >= MAX_RETRIES) {
+        if (onStatusChange) {
+          onStatusChange({ 
+            connected: false, 
+            offline: true, 
+            retries: retryCount,
+            message: 'Telemetría desconectada. Servidor no disponible o sin proxy WebSocket.' 
+          });
+        }
+        return;
+      }
+
+      const delay = Math.min(2000 * Math.pow(2, retryCount), 30000);
+      retryCount++;
+      if (onStatusChange) {
+        onStatusChange({ connected: false, offline: false, retries: retryCount, nextRetryIn: delay });
+      }
+      timer = setTimeout(connectWs, delay);
+    }
 
     function connectWs() {
-      ws = new WebSocket(getWsUrl());
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      try {
+        ws = new WebSocket(getWsUrl());
+      } catch (err) {
+        handleDisconnect();
+        return;
+      }
+
+      ws.onopen = () => {
+        retryCount = 0;
+        if (onStatusChange) {
+          onStatusChange({ connected: true, offline: false, retries: 0 });
+        }
+      };
+
       ws.onmessage = (e) => {
         try {
           const msg = JSON.parse(e.data);
@@ -279,13 +339,20 @@ export function subscribeTelemetry(onTelemetry, onLog) {
           }
         } catch (err) { }
       };
+
       ws.onclose = () => {
-        timer = setTimeout(connectWs, 2000);
+        handleDisconnect();
       };
+
       ws.onerror = () => {
-        ws.close();
+        handleDisconnect();
       };
     }
+
+    reconnectWsManualFn = () => {
+      retryCount = 0;
+      connectWs();
+    };
 
     connectWs();
 
@@ -296,7 +363,7 @@ export function subscribeTelemetry(onTelemetry, onLog) {
   }
 }
 
-// Flasheador de Firmware y Drivers
+// Flasheador de Firmware y Drivers con Detección de Entorno Web
 export async function flashFirmware(port, robotType, baudRate = 115200, autoFallback = true) {
   if (isTauri()) {
     return await invoke('flash_firmware', {
@@ -307,32 +374,45 @@ export async function flashFirmware(port, robotType, baudRate = 115200, autoFall
     });
   } else {
     ensureSharedWs();
-    const res = await fetch(`${HTTP_API_URL}/api/firmware/flash`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        port,
-        robotType,
-        baudRate: Number(baudRate),
-        autoFallback: Boolean(autoFallback)
-      })
-    });
-    if (!res.ok) {
-      let errMsg = `Error ${res.status}: Fallo en el servidor de flasheo`;
-      try {
-        const errJson = await res.json();
-        if (errJson?.message) errMsg = errJson.message;
-      } catch {}
-      throw new Error(errMsg);
-    }
-    const data = await res.json();
-    if (data.log) {
-      const lines = data.log.split('\n');
-      for (const line of lines) {
-        if (line.trim()) emitWebFlashLog(line);
+    try {
+      const res = await fetch(`${HTTP_API_URL}/api/firmware/flash`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          port,
+          robotType,
+          baudRate: Number(baudRate),
+          autoFallback: Boolean(autoFallback)
+        })
+      });
+
+      if (!res.ok) {
+        let errMsg = `Error ${res.status}: Fallo en el servidor de flasheo`;
+        if (res.status === 405) {
+          errMsg = 'El servidor web remoto no permite flasheo de puertos USB locales vía avrdude (405 Method Not Allowed). Para flashear Arduino Nano por USB, ejecuta la app nativa de escritorio (LineFollowerPro.exe) o el backend local (http://localhost:5010).';
+        } else {
+          try {
+            const errJson = await res.json();
+            if (errJson?.message) errMsg = errJson.message;
+          } catch {}
+        }
+        throw new Error(errMsg);
       }
+
+      const data = await res.json();
+      if (data.log) {
+        const lines = data.log.split('\n');
+        for (const line of lines) {
+          if (line.trim()) emitWebFlashLog(line);
+        }
+      }
+      return data;
+    } catch (netErr) {
+      if (netErr.message && netErr.message.includes('405')) {
+        throw netErr;
+      }
+      throw new Error(`No se pudo conectar con el servicio local de flasheo avrdude (${netErr.message}). Asegúrate de ejecutar el backend local o la versión de escritorio LineFollowerPro.exe.`);
     }
-    return data;
   }
 }
 

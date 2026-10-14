@@ -23,6 +23,7 @@
     saveProfile as bridgeSaveProfile,
     deleteProfile as bridgeDeleteProfile,
     subscribeTelemetry,
+    reconnectTelemetry,
     isTauri
   } from './lib/tauriBridge.js';
 
@@ -73,6 +74,7 @@
 
   let profiles = [];
   let eepromStatus = null;
+  let isTelemetryOffline = false;
   let ws = null;
   let wsReconnectTimer = null;
 
@@ -400,6 +402,13 @@
       },
       (logMsg) => {
         statusMessage = `[Robot]: ${logMsg}`;
+      },
+      (status) => {
+        if (status.offline) {
+          isTelemetryOffline = true;
+        } else if (status.connected) {
+          isTelemetryOffline = false;
+        }
       }
     );
   });
@@ -488,6 +497,8 @@
       {selectedPort} 
       {isConnected} 
       {statusMessage}
+      {isTelemetryOffline}
+      on:reconnectTelemetry={reconnectTelemetry}
       on:connect={handleConnect}
       on:disconnect={handleDisconnect}
       on:refreshPorts={fetchPorts}

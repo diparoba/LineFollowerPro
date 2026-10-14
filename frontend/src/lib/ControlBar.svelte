@@ -7,6 +7,7 @@
   export let selectedBaud = 115200;
   export let isConnected = false;
   export let statusMessage = '';
+  export let isTelemetryOffline = false;
 
   const dispatch = createEventDispatcher();
   let isWeb = !isTauri();
@@ -137,7 +138,15 @@
   </div>
 </div>
 
-{#if statusMessage}
+{#if isTelemetryOffline}
+  <div class="status-banner offline-banner">
+    <span class="status-label precision-chip offline-chip">OFFLINE</span>
+    <span class="status-text precision-mono">Telemetría desconectada (Sin WebSocket con el servidor).</span>
+    <button class="precision-btn btn-retry-ws" on:click={() => dispatch('reconnectTelemetry')}>
+      🔄 Reintentar Conexión
+    </button>
+  </div>
+{:else if statusMessage}
   <div class="status-banner">
     <span class="status-label precision-chip">ESTADO</span>
     <span class="status-text precision-mono">{statusMessage}</span>
@@ -341,6 +350,36 @@
   .status-text {
     font-size: 0.78rem;
     color: var(--text-secondary);
+  }
+
+  .status-banner.offline-banner {
+    border-left-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.05);
+    border-color: rgba(245, 158, 11, 0.25);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .offline-chip {
+    background: rgba(245, 158, 11, 0.15) !important;
+    color: #fbbf24 !important;
+    border-color: rgba(245, 158, 11, 0.4) !important;
+  }
+
+  .btn-retry-ws {
+    font-size: 0.72rem;
+    padding: 0.2rem 0.55rem;
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    color: #fbbf24;
+    cursor: pointer;
+    border-radius: 4px;
+    margin-left: auto;
+  }
+
+  .btn-retry-ws:hover {
+    background: rgba(245, 158, 11, 0.25);
   }
 
   @media (max-width: 1200px) {

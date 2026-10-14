@@ -40,8 +40,19 @@ case "$ACTION" in
     logs-frontend)
         sudo journalctl -u linefollower-frontend.service -f
         ;;
+    nginx-setup)
+        echo "==> Copiando configuración oficial de Nginx..."
+        if [ -f "deploy/nginx/linefollower.conf" ]; then
+            sudo cp deploy/nginx/linefollower.conf /etc/nginx/sites-available/linefollower.conf
+            sudo ln -sf /etc/nginx/sites-available/linefollower.conf /etc/nginx/sites-enabled/
+            sudo nginx -t && sudo systemctl reload nginx
+            echo "✅ Configuración de Nginx aplicada y recargada con éxito."
+        else
+            echo "❌ No se encontró deploy/nginx/linefollower.conf"
+        fi
+        ;;
     *)
-        echo "Uso: $0 {start|stop|restart|status|logs|logs-backend|logs-frontend}"
+        echo "Uso: $0 {start|stop|restart|status|logs|logs-backend|logs-frontend|nginx-setup}"
         exit 1
         ;;
 esac
