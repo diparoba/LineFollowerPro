@@ -111,7 +111,8 @@ export async function sendPid(config) {
       maxSpeed: Number(config.maxSpeed),
       brakeSpeed: Number(config.brakeSpeed),
       forkMode: Number(config.forkMode),
-      lineColor: Number(config.lineColor)
+      lineColor: Number(config.lineColor),
+      reflective: Number(config.reflectiveMode || 0)
     });
     return { success };
   } else {
@@ -125,7 +126,8 @@ export async function sendPid(config) {
         maxSpeed: config.maxSpeed,
         brakeSpeed: config.brakeSpeed,
         forkMode: config.forkMode,
-        lineColor: config.lineColor
+        lineColor: config.lineColor,
+        reflectiveMode: Number(config.reflectiveMode || 0)
       })
     });
     return await res.json();
@@ -200,6 +202,7 @@ export async function saveProfile(profile) {
         brakeSpeed: Number(profile.brakeSpeed),
         forkMode: Number(profile.forkMode),
         lineColor: Number(profile.lineColor),
+        reflectiveMode: Number(profile.reflectiveMode || 0),
         createdAt: profile.createdAt || null
       }
     });

@@ -32,12 +32,13 @@ impl DatabaseService {
                 brake_speed INTEGER NOT NULL,
                 fork_mode INTEGER NOT NULL,
                 line_color INTEGER NOT NULL,
+                reflective_mode INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL
             );",
             [],
         ).map_err(|e| format!("Error creando tabla profiles: {}", e))?;
 
-        // Migración automática: verificar si existen columnas car_name y car_category
+        // Migración automática: verificar si existen columnas car_name, car_category y reflective_mode
         let mut pragma_stmt = conn.prepare("PRAGMA table_info(profiles)")
             .map_err(|e| e.to_string())?;
         let columns: Vec<String> = pragma_stmt.query_map([], |row| row.get::<_, String>(1))
@@ -51,6 +52,10 @@ impl DatabaseService {
 
         if !columns.iter().any(|c| c.eq_ignore_ascii_case("car_category")) {
             let _ = conn.execute("ALTER TABLE profiles ADD COLUMN car_category TEXT NOT NULL DEFAULT 'IM_16';", []);
+        }
+
+        if !columns.iter().any(|c| c.eq_ignore_ascii_case("reflective_mode")) {
+            let _ = conn.execute("ALTER TABLE profiles ADD COLUMN reflective_mode INTEGER NOT NULL DEFAULT 0;", []);
         }
 
         // Si la tabla está vacía, insertar perfiles de fábrica
@@ -67,22 +72,22 @@ impl DatabaseService {
     fn insert_default_profiles(conn: &Connection) -> Result<(), String> {
         let presets = vec![
             // 16 Líneas (Ingeniero Maker)
-            ("Pista Rápida (16L)", "Carro IM-1", "IM_16", 0.20f32, 3.5f32, 200, 255, 120, 0, 0),
-            ("Pista Técnica (16L)", "Carro IM-1", "IM_16", 0.28f32, 4.8f32, 160, 220, 150, 0, 0),
-            ("Bifurcación Izq (16L)", "Carro IM-2", "IM_16", 0.24f32, 4.2f32, 170, 230, 130, 1, 0),
+            ("Pista Rápida (16L)", "Carro IM-1", "IM_16", 0.20f32, 3.5f32, 200, 255, 120, 0, 0, 0),
+            ("Pista Técnica (16L)", "Carro IM-1", "IM_16", 0.28f32, 4.8f32, 160, 220, 150, 0, 0, 0),
+            ("Bifurcación Izq (16L)", "Carro IM-2", "IM_16", 0.24f32, 4.2f32, 170, 230, 130, 1, 0, 0),
             // 8 Líneas (Codex)
-            ("Pista Rápida (8L Codex)", "Carro Codex-1", "CODEX_8", 0.35f32, 5.0f32, 190, 255, 125, 0, 0),
-            ("Pista Técnica (8L Codex)", "Carro Codex-1", "CODEX_8", 0.45f32, 6.5f32, 150, 210, 145, 0, 0),
-            ("Bifurcación Der (8L Codex)", "Carro Codex-2", "CODEX_8", 0.38f32, 5.2f32, 170, 220, 130, 2, 0),
+            ("Pista Rápida (8L Codex)", "Carro Codex-1", "CODEX_8", 0.35f32, 5.0f32, 190, 255, 125, 0, 0, 0),
+            ("Pista Técnica (8L Codex)", "Carro Codex-1", "CODEX_8", 0.45f32, 6.5f32, 150, 210, 145, 0, 0, 0),
+            ("Bifurcación Der (8L Codex)", "Carro Codex-2", "CODEX_8", 0.38f32, 5.2f32, 170, 220, 130, 2, 0, 0),
         ];
 
         let now = chrono_now();
 
-        for (name, car_name, car_cat, kp, kd, base, max, brake, fork, color) in presets {
+        for (name, car_name, car_cat, kp, kd, base, max, brake, fork, color, reflective) in presets {
             conn.execute(
-                "INSERT INTO profiles (name, car_name, car_category, kp, kd, base_speed, max_speed, brake_speed, fork_mode, line_color, created_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
-                params![name, car_name, car_cat, kp, kd, base, max, brake, fork, color, now],
+                "INSERT INTO profiles (name, car_name, car_category, kp, kd, base_speed, max_speed, brake_speed, fork_mode, line_color, reflective_mode, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+                params![name, car_name, car_cat, kp, kd, base, max, brake, fork, color, reflective, now],
             ).map_err(|e| format!("Error insertando perfiles por defecto: {}", e))?;
         }
 
@@ -92,7 +97,7 @@ impl DatabaseService {
     pub fn get_profiles(&self, category: Option<String>, car_name: Option<String>) -> Result<Vec<RobotProfile>, String> {
         let conn = self.conn.lock().map_err(|e| e.to_string())?;
 
-        let mut sql = String::from("SELECT id, name, car_name, car_category, kp, kd, base_speed, max_speed, brake_speed, fork_mode, line_color, created_at FROM profiles WHERE 1=1");
+        let mut sql = String::from("SELECT id, name, car_name, car_category, kp, kd, base_speed, max_speed, brake_speed, fork_mode, line_color, created_at, reflective_mode FROM profiles WHERE 1=1");
         
         if category.is_some() {
             sql.push_str(" AND car_category = ?1");
@@ -131,7 +136,7 @@ impl DatabaseService {
     pub fn get_profile(&self, id: i64) -> Result<Option<RobotProfile>, String> {
         let conn = self.conn.lock().map_err(|e| e.to_string())?;
         let mut stmt = conn.prepare(
-            "SELECT id, name, car_name, car_category, kp, kd, base_speed, max_speed, brake_speed, fork_mode, line_color, created_at 
+            "SELECT id, name, car_name, car_category, kp, kd, base_speed, max_speed, brake_speed, fork_mode, line_color, created_at, reflective_mode 
              FROM profiles WHERE id = ?1"
         ).map_err(|e| e.to_string())?;
 
@@ -159,8 +164,9 @@ impl DatabaseService {
                     "UPDATE profiles 
                      SET name = ?1, car_name = ?2, car_category = ?3,
                          kp = ?4, kd = ?5, base_speed = ?6, max_speed = ?7,
-                         brake_speed = ?8, fork_mode = ?9, line_color = ?10
-                     WHERE id = ?11",
+                         brake_speed = ?8, fork_mode = ?9, line_color = ?10,
+                         reflective_mode = ?11
+                     WHERE id = ?12",
                     params![
                         profile.name,
                         profile.car_name,
@@ -172,6 +178,7 @@ impl DatabaseService {
                         profile.brake_speed,
                         profile.fork_mode,
                         profile.line_color,
+                        profile.reflective_mode,
                         id
                     ],
                 ).map_err(|e| format!("Error actualizando perfil: {}", e))?;
@@ -181,8 +188,8 @@ impl DatabaseService {
 
         let now = chrono_now();
         conn.execute(
-            "INSERT INTO profiles (name, car_name, car_category, kp, kd, base_speed, max_speed, brake_speed, fork_mode, line_color, created_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            "INSERT INTO profiles (name, car_name, car_category, kp, kd, base_speed, max_speed, brake_speed, fork_mode, line_color, reflective_mode, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
             params![
                 profile.name,
                 profile.car_name,
@@ -194,6 +201,7 @@ impl DatabaseService {
                 profile.brake_speed,
                 profile.fork_mode,
                 profile.line_color,
+                profile.reflective_mode,
                 now
             ],
         ).map_err(|e| format!("Error guardando nuevo perfil: {}", e))?;
@@ -255,6 +263,7 @@ fn map_profile_row(row: &rusqlite::Row) -> rusqlite::Result<RobotProfile> {
         fork_mode: row.get(9)?,
         line_color: row.get(10)?,
         created_at: Some(row.get(11)?),
+        reflective_mode: row.get(12).unwrap_or(0),
     })
 }
 

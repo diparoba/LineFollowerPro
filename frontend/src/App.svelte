@@ -67,7 +67,8 @@
     maxSpeed: 255,
     brakeSpeed: 130,
     forkMode: 0,
-    lineColor: 0
+    lineColor: 0,
+    reflectiveMode: 0
   };
 
   let profiles = [];
@@ -239,10 +240,19 @@
     try {
       const data = await bridgeReadEeprom();
       if (data.success && data.data) {
-        // Formato: $EEPROM_DATA,kp,kd,base,max,brake,fork,color
+        // Formato: $EEPROM_DATA,kp,kd,base,max,brake,fork,color,reflective
         const clean = data.data.replace('$EEPROM_DATA,', '').trim();
         const parts = clean.split(',');
         if (parts.length >= 7) {
+          const rawColor = parseInt(parts[6]);
+          let color = rawColor;
+          let reflective = 0;
+          if (parts.length >= 8) {
+            reflective = parseInt(parts[7]) || 0;
+          } else if (rawColor >= 2) {
+            color = rawColor % 2;
+            reflective = 1;
+          }
           config = {
             kp: parseFloat(parts[0]),
             kd: parseFloat(parts[1]),
@@ -250,12 +260,13 @@
             maxSpeed: parseInt(parts[3]),
             brakeSpeed: parseInt(parts[4]),
             forkMode: parseInt(parts[5]),
-            lineColor: parseInt(parts[6])
+            lineColor: color,
+            reflectiveMode: reflective
           };
           eepromStatus = {
             type: 'success',
             message: '¡Valores de EEPROM cargados en los ajustes PD con éxito!',
-            details: `Sensibilidad (Kp)=${config.kp.toFixed(4)}, Corrección (Kd)=${config.kd.toFixed(4)}, Base=${config.baseSpeed}, Freno=${config.brakeSpeed}`
+            details: `Sensibilidad (Kp)=${config.kp.toFixed(4)}, Corrección (Kd)=${config.kd.toFixed(4)}, Base=${config.baseSpeed}, Freno=${config.brakeSpeed}, Superficie=${config.reflectiveMode === 1 ? 'Reflectante' : 'Mate'}`
           };
           statusMessage = `EEPROM sincronizada a controles: Kp=${config.kp.toFixed(4)}, Kd=${config.kd.toFixed(4)}, Base=${config.baseSpeed}`;
           return;
@@ -321,7 +332,8 @@
       maxSpeed: p.maxSpeed,
       brakeSpeed: p.brakeSpeed,
       forkMode: p.forkMode,
-      lineColor: p.lineColor
+      lineColor: p.lineColor,
+      reflectiveMode: p.reflectiveMode !== undefined ? p.reflectiveMode : 0
     };
     if (p.carCategory) activeCategory = p.carCategory;
     if (p.carName) activeCarName = p.carName;
@@ -519,6 +531,7 @@
           brakeSpeed={config.brakeSpeed} 
           forkMode={config.forkMode} 
           lineColor={config.lineColor} 
+          reflectiveMode={config.reflectiveMode}
           {isConnected}
           {eepromStatus}
           {activeCarName}
@@ -620,7 +633,8 @@
     flex-wrap: wrap;
     gap: 0.65rem;
     flex-shrink: 0;
-    min-height: 48px;
+    min-height: max-content;
+    overflow: visible;
   }
 
   .header-left {

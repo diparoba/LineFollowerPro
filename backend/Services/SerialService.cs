@@ -103,10 +103,10 @@ public class SerialService : IDisposable
         }
     }
 
-    public bool SendPid(float kp, float kd, int baseSpeed, int maxSpeed, int brakeSpeed, int forkMode, int lineColor)
+    public bool SendPid(float kp, float kd, int baseSpeed, int maxSpeed, int brakeSpeed, int forkMode, int lineColor, int reflectiveMode = 0)
     {
-        // Formato: $PID,kp,kd,base,max,brake,fork,color
-        var cmd = FormattableString.Invariant($"$PID,{kp:F4},{kd:F3},{baseSpeed},{maxSpeed},{brakeSpeed},{forkMode},{lineColor}");
+        // Formato: $PID,kp,kd,base,max,brake,fork,color,reflective
+        var cmd = FormattableString.Invariant($"$PID,{kp:F4},{kd:F3},{baseSpeed},{maxSpeed},{brakeSpeed},{forkMode},{lineColor},{reflectiveMode}");
         return SendRaw(cmd);
     }
 

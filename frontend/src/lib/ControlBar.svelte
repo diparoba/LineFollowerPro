@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
+  import { isTauri, requestWebSerialPort } from './tauriBridge.js';
 
   export let ports = [];
   export let selectedPort = '';
@@ -8,6 +9,22 @@
   export let statusMessage = '';
 
   const dispatch = createEventDispatcher();
+  let isWeb = !isTauri();
+  let requestingPermission = false;
+
+  async function handleGrantPermission() {
+    try {
+      requestingPermission = true;
+      await requestWebSerialPort();
+      handleRefreshPorts();
+    } catch (err) {
+      if (err.message && !err.message.includes('No se seleccionó')) {
+        alert(err.message || 'Error solicitando permiso Web Serial');
+      }
+    } finally {
+      requestingPermission = false;
+    }
+  }
 
   function handleConnect() {
     if (isConnected) {
@@ -52,6 +69,17 @@
         <option value={9600}>9600 (HC-05)</option>
       </select>
     </div>
+
+    {#if isWeb}
+      <button 
+        class="precision-btn btn-permission" 
+        on:click={handleGrantPermission} 
+        disabled={isConnected || requestingPermission}
+        title="Conceder permiso de acceso al puerto USB/COM en el navegador (Web Serial API para Arduino o ESP32)"
+      >
+        <span>{requestingPermission ? '⌛ Solicitando...' : '🔑 Conceder Permiso USB'}</span>
+      </button>
+    {/if}
 
     <button 
       class="precision-btn {isConnected ? 'btn-disconnect' : 'btn-connect'}" 
@@ -126,7 +154,8 @@
     gap: 0.75rem;
     margin-bottom: 0.75rem;
     flex-shrink: 0;
-    min-height: 52px;
+    min-height: max-content;
+    overflow: visible;
   }
 
   .serial-section {
@@ -134,6 +163,25 @@
     align-items: center;
     gap: 0.65rem;
     flex-wrap: wrap;
+  }
+
+  .btn-permission {
+    background: #0d9488;
+    color: #ffffff;
+    font-weight: 700;
+    height: 36px;
+    padding: 0 0.85rem;
+    font-size: 0.82rem;
+    border-radius: var(--radius-btn);
+    box-shadow: 0 2px 6px rgba(13, 148, 136, 0.3);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: all 0.15s ease;
+  }
+
+  .btn-permission:hover:not(:disabled) {
+    background: #0f766e;
   }
 
   .com-select-group {

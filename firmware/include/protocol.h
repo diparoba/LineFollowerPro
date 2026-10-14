@@ -40,7 +40,8 @@ public:
                   (verify_cfg.max_speed == cfg.max_speed) &&
                   (verify_cfg.brake_speed == cfg.brake_speed) &&
                   (verify_cfg.fork_mode == cfg.fork_mode) &&
-                  (verify_cfg.line_color == cfg.line_color);
+                  (verify_cfg.line_color == cfg.line_color) &&
+                  (verify_cfg.reflective_mode == cfg.reflective_mode);
 
         if (ok) {
             // Confirmación detallada con los valores leídos directamente de la EEPROM
@@ -57,7 +58,9 @@ public:
             Serial.print(',');
             Serial.print(verify_cfg.fork_mode);
             Serial.print(',');
-            Serial.println(verify_cfg.line_color);
+            Serial.print(verify_cfg.line_color);
+            Serial.print(',');
+            Serial.println(verify_cfg.reflective_mode);
 
             // Destello visual en el LED 13 del Arduino confirmando grabación física
             for (uint8_t k = 0; k < 3; k++) {
@@ -92,7 +95,9 @@ public:
             Serial.print(',');
             Serial.print(stored.fork_mode);
             Serial.print(',');
-            Serial.println(stored.line_color);
+            Serial.print(stored.line_color);
+            Serial.print(',');
+            Serial.println(stored.reflective_mode);
         } else {
             Serial.println(F("$EEPROM_ERR,EMPTY"));
         }
@@ -142,7 +147,9 @@ public:
         Serial.print(',');
         Serial.print(cfg.fork_mode);
         Serial.print(',');
-        Serial.println(cfg.line_color);
+        Serial.print(cfg.line_color);
+        Serial.print(',');
+        Serial.println(cfg.reflective_mode);
     }
 
     // Procesa caracteres entrantes sin bloquear
@@ -165,7 +172,10 @@ public:
 
 private:
     void parseCommand(char *cmd, RobotConfig &cfg, RobotState &state, SensorArray &sensors, MotorDriver &motors) {
-        // Comando $PID,kp,kd,base,max,brake,fork,color
+        // Comando $PID,kp,kd,base,max,brake,fork,color[,reflective]
+        //  - 8vo parámetro opcional 'reflective' (0/1) activa el Modo Piso Reflectante.
+        //  - Sin 8vo parámetro: color = 2 (Negra Reflectante) o 3 (Blanca Reflectante) también lo activa,
+        //    para que una app con la trama de 7 campos pueda usarlo sin cambios.
         if (strncmp(cmd, "$PID,", 5) == 0) {
             char *p = cmd + 5;
             float kp = atof(strtok(p, ","));
@@ -180,7 +190,8 @@ private:
             t = strtok(NULL, ",");
             uint8_t fork_m = t ? (uint8_t)atoi(t) : cfg.fork_mode;
             t = strtok(NULL, ",");
-            uint8_t color_l = t ? (uint8_t)atoi(t) : cfg.line_color;
+            uint8_t raw_color = t ? (uint8_t)atoi(t) : cfg.line_color;
+            char *t_reflect = strtok(NULL, ",");
 
             cfg.kp = kp;
             cfg.kd = kd;
@@ -188,7 +199,15 @@ private:
             cfg.max_speed = max_s;
             cfg.brake_speed = brake;
             cfg.fork_mode = fork_m;
-            cfg.line_color = color_l;
+            cfg.line_color = raw_color & 0x01; // 0 = Negra, 1 = Blanca (2 -> 0, 3 -> 1)
+
+            if (t_reflect != NULL) {
+                cfg.reflective_mode = atoi(t_reflect) ? 1 : 0;   // 8vo parámetro explícito manda
+            } else if (raw_color >= 2) {
+                cfg.reflective_mode = 1;                          // Atajo retrocompatible por line_color
+            } else {
+                cfg.reflective_mode = 0;                          // Trama clásica de 7 campos: piso normal
+            }
 
             Serial.println(F("$OK,PID_UPDATED"));
             sendConfig(cfg);
@@ -213,6 +232,14 @@ private:
                 state = STATE_CALIB_BLACK;
             } else if (strcmp(action, "CAL_WHITE") == 0) {
                 state = STATE_CALIB_WHITE;
+            } else if (strcmp(action, "REFLECT_ON") == 0) {
+                cfg.reflective_mode = 1;
+                Serial.println(F("$OK,REFLECTIVE_MODE_ON"));
+                sendConfig(cfg);
+            } else if (strcmp(action, "REFLECT_OFF") == 0) {
+                cfg.reflective_mode = 0;
+                Serial.println(F("$OK,REFLECTIVE_MODE_OFF"));
+                sendConfig(cfg);
             }
         }
         // Comando $EEPROM,SAVE, $EEPROM,LOAD o $EEPROM,READ

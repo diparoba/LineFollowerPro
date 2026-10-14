@@ -134,6 +134,7 @@ void setup() {
         config.brake_speed = 130;
         config.fork_mode = FORK_STRAIGHT;
         config.line_color = 0; // Línea negra por defecto
+        config.reflective_mode = 0; // Piso normal por defecto
         comm.saveConfigEEPROM(config);
     }
 
@@ -194,7 +195,7 @@ void loop() {
 
     // 4. Control de Seguimiento en Carrera
     if (state == STATE_RUNNING) {
-        current_pos = sensors.getPosition(config.fork_mode, config.line_color == 0);
+        current_pos = sensors.getPosition(config.fork_mode, config.line_color == 0, config.reflective_mode != 0);
         current_err = current_pos - SENSOR_SETPOINT;
         controller.update(current_pos, sensors.line_lost, config, motors);
     } else {

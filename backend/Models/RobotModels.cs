@@ -25,6 +25,7 @@ public class RobotProfile
     public int BrakeSpeed { get; set; }
     public int ForkMode { get; set; }  // 0: Recto, 1: Izquierda, 2: Derecha
     public int LineColor { get; set; } // 0: Negra sobre blanco, 1: Blanca sobre negro
+    public int ReflectiveMode { get; set; } = 0; // 0: Normal / Mate, 1: Piso Reflectante
     public string CreatedAt { get; set; } = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
 }
 

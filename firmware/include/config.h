@@ -90,10 +90,14 @@ struct RobotConfig {
     int16_t brake_speed;    // Intensidad de frenado activo en curvas (0 - 255)
     uint8_t fork_mode;      // Modo de bifurcación (0: Recto, 1: Izq, 2: Der)
     uint8_t line_color;     // 0 = Línea negra sobre fondo blanco, 1 = Línea blanca sobre fondo negro
+    uint8_t reflective_mode; // 0 = Piso Normal/Mate (algoritmo original), 1 = Piso Reflectante (filtro antirreflejos)
 };
+// En AVR (ATmega328P) la alineación es de 1 byte: sin padding, 4+4+2+2+2+1+1+1 = 17 bytes en EEPROM.
 
 // ==========================================
 // DIRECCIÓN EEPROM
 // ==========================================
-#define EEPROM_MAGIC 0x4C46  // "LF" (Line Follower)
+// Firma cambiada de 0x4C46 ("LF") a 0x4C47 ("LG", Glare-aware) al agregar reflective_mode:
+// un Arduino con la estructura anterior detecta la firma distinta y se reinicia con valores seguros.
+#define EEPROM_MAGIC 0x4C47  // "LG" (LineFollower Glare-aware)
 #define EEPROM_ADDR  0

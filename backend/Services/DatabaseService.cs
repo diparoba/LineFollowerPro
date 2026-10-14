@@ -32,6 +32,7 @@ public class DatabaseService
                 brake_speed INTEGER NOT NULL,
                 fork_mode INTEGER NOT NULL,
                 line_color INTEGER NOT NULL,
+                reflective_mode INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL
             );
         ";
@@ -39,7 +40,7 @@ public class DatabaseService
         using var command = new SqliteCommand(sql, connection);
         command.ExecuteNonQuery();
 
-        // Migración automática para bases de datos existentes: verificar si existen columnas car_name y car_category
+        // Migración automática para bases de datos existentes: verificar si existen columnas car_name, car_category y reflective_mode
         var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         using (var colCmd = new SqliteCommand("PRAGMA table_info(profiles)", connection))
         using (var reader = colCmd.ExecuteReader())
@@ -59,6 +60,12 @@ public class DatabaseService
         if (!columns.Contains("car_category"))
         {
             using var alterCmd = new SqliteCommand("ALTER TABLE profiles ADD COLUMN car_category TEXT NOT NULL DEFAULT 'IM_16';", connection);
+            alterCmd.ExecuteNonQuery();
+        }
+
+        if (!columns.Contains("reflective_mode"))
+        {
+            using var alterCmd = new SqliteCommand("ALTER TABLE profiles ADD COLUMN reflective_mode INTEGER NOT NULL DEFAULT 0;", connection);
             alterCmd.ExecuteNonQuery();
         }
 
@@ -99,7 +106,7 @@ public class DatabaseService
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
 
-        var sql = "SELECT id, name, car_name, car_category, kp, kd, base_speed, max_speed, brake_speed, fork_mode, line_color, created_at FROM profiles WHERE 1=1";
+        var sql = "SELECT id, name, car_name, car_category, kp, kd, base_speed, max_speed, brake_speed, fork_mode, line_color, created_at, reflective_mode FROM profiles WHERE 1=1";
         
         if (!string.IsNullOrWhiteSpace(category))
         {
@@ -139,7 +146,8 @@ public class DatabaseService
                 BrakeSpeed = reader.GetInt32(8),
                 ForkMode = reader.GetInt32(9),
                 LineColor = reader.GetInt32(10),
-                CreatedAt = reader.GetString(11)
+                CreatedAt = reader.GetString(11),
+                ReflectiveMode = reader.GetInt32(12)
             });
         }
 
@@ -151,7 +159,7 @@ public class DatabaseService
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
 
-        var sql = "SELECT id, name, car_name, car_category, kp, kd, base_speed, max_speed, brake_speed, fork_mode, line_color, created_at FROM profiles WHERE id = @id";
+        var sql = "SELECT id, name, car_name, car_category, kp, kd, base_speed, max_speed, brake_speed, fork_mode, line_color, created_at, reflective_mode FROM profiles WHERE id = @id";
         using var cmd = new SqliteCommand(sql, connection);
         cmd.Parameters.AddWithValue("@id", id);
         using var reader = cmd.ExecuteReader();
@@ -171,7 +179,8 @@ public class DatabaseService
                 BrakeSpeed = reader.GetInt32(8),
                 ForkMode = reader.GetInt32(9),
                 LineColor = reader.GetInt32(10),
-                CreatedAt = reader.GetString(11)
+                CreatedAt = reader.GetString(11),
+                ReflectiveMode = reader.GetInt32(12)
             };
         }
 
@@ -203,7 +212,8 @@ public class DatabaseService
                 SET name = @name, car_name = @car_name, car_category = @car_category,
                     kp = @kp, kd = @kd, base_speed = @base_speed, 
                     max_speed = @max_speed, brake_speed = @brake_speed, 
-                    fork_mode = @fork_mode, line_color = @line_color
+                    fork_mode = @fork_mode, line_color = @line_color,
+                    reflective_mode = @reflective_mode
                 WHERE id = @id";
             using var cmd = new SqliteCommand(updateSql, connection);
             cmd.Parameters.AddWithValue("@id", profile.Id);
@@ -217,13 +227,14 @@ public class DatabaseService
             cmd.Parameters.AddWithValue("@brake_speed", profile.BrakeSpeed);
             cmd.Parameters.AddWithValue("@fork_mode", profile.ForkMode);
             cmd.Parameters.AddWithValue("@line_color", profile.LineColor);
+            cmd.Parameters.AddWithValue("@reflective_mode", profile.ReflectiveMode);
             cmd.ExecuteNonQuery();
         }
         else
         {
             var insertSql = @"
-                INSERT INTO profiles (name, car_name, car_category, kp, kd, base_speed, max_speed, brake_speed, fork_mode, line_color, created_at)
-                VALUES (@name, @car_name, @car_category, @kp, @kd, @base_speed, @max_speed, @brake_speed, @fork_mode, @line_color, @created_at);
+                INSERT INTO profiles (name, car_name, car_category, kp, kd, base_speed, max_speed, brake_speed, fork_mode, line_color, reflective_mode, created_at)
+                VALUES (@name, @car_name, @car_category, @kp, @kd, @base_speed, @max_speed, @brake_speed, @fork_mode, @line_color, @reflective_mode, @created_at);
                 SELECT last_insert_rowid();";
             using var cmd = new SqliteCommand(insertSql, connection);
             cmd.Parameters.AddWithValue("@name", profile.Name);
@@ -236,6 +247,7 @@ public class DatabaseService
             cmd.Parameters.AddWithValue("@brake_speed", profile.BrakeSpeed);
             cmd.Parameters.AddWithValue("@fork_mode", profile.ForkMode);
             cmd.Parameters.AddWithValue("@line_color", profile.LineColor);
+            cmd.Parameters.AddWithValue("@reflective_mode", profile.ReflectiveMode);
             cmd.Parameters.AddWithValue("@created_at", DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"));
             profile.Id = Convert.ToInt32(cmd.ExecuteScalar());
         }

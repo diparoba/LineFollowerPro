@@ -8,6 +8,7 @@
   export let brakeSpeed = 130;
   export let forkMode = 0;
   export let lineColor = 0;
+  export let reflectiveMode = 0;
   export let isConnected = false;
   export let eepromStatus = null;
   export let activeCarName = 'Carro 1';
@@ -27,7 +28,8 @@
       maxSpeed,
       brakeSpeed,
       forkMode,
-      lineColor
+      lineColor,
+      reflectiveMode
     });
   }
 
@@ -54,7 +56,8 @@
       maxSpeed,
       brakeSpeed,
       forkMode,
-      lineColor
+      lineColor,
+      reflectiveMode
     });
     profileName = '';
   }
@@ -184,6 +187,26 @@
           class="pill {lineColor === 1 ? 'selected' : ''}" 
           on:click={() => lineColor = 1}
         >⚪ Línea Blanca</button>
+      </div>
+    </div>
+
+    <!-- Superficie de Pista (Modo Normal vs Piso Reflectante) -->
+    <div class="input-group reflective-group">
+      <div class="group-label">
+        <span class="group-title">Superficie de Pista</span>
+        <span class="val-display precision-mono">{reflectiveMode === 1 ? 'ANTIRREFLEJOS' : 'MATE'}</span>
+      </div>
+      <div class="pill-selector">
+        <button 
+          class="pill {reflectiveMode === 0 ? 'selected' : ''}" 
+          on:click={() => reflectiveMode = 0}
+          title="Filtro estándar lineal para pistas sin brillo"
+        >Piso Normal (Mate)</button>
+        <button 
+          class="pill {reflectiveMode === 1 ? 'selected' : ''}" 
+          on:click={() => reflectiveMode = 1}
+          title="Noise gate, supresión de destellos de coliseo y ventana espacial"
+        >✨ Piso Reflectante</button>
       </div>
     </div>
   </div>

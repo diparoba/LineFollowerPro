@@ -55,8 +55,9 @@ fn send_pid(
     brake_speed: i32,
     fork_mode: i32,
     line_color: i32,
+    reflective: Option<i32>,
 ) -> Result<bool, String> {
-    state.serial.send_pid(kp, kd, base_speed, max_speed, brake_speed, fork_mode, line_color)
+    state.serial.send_pid(kp, kd, base_speed, max_speed, brake_speed, fork_mode, line_color, reflective.unwrap_or(0))
 }
 
 #[tauri::command]

@@ -131,8 +131,8 @@ impl SerialService {
         }
     }
 
-    pub fn send_pid(&self, kp: f32, kd: f32, base: i32, max: i32, brake: i32, fork: i32, color: i32) -> Result<bool, String> {
-        let cmd = format!("$PID,{:.4},{:.4},{},{},{},{},{}", kp, kd, base, max, brake, fork, color);
+    pub fn send_pid(&self, kp: f32, kd: f32, base: i32, max: i32, brake: i32, fork: i32, color: i32, reflective: i32) -> Result<bool, String> {
+        let cmd = format!("$PID,{:.4},{:.4},{},{},{},{},{},{}", kp, kd, base, max, brake, fork, color, reflective);
         self.send_raw(&cmd)
     }
 

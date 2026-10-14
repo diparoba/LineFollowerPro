@@ -33,6 +33,8 @@ pub struct RobotProfile {
     pub fork_mode: i32,
     #[serde(rename = "lineColor")]
     pub line_color: i32,
+    #[serde(rename = "reflectiveMode", default)]
+    pub reflective_mode: i32,
     #[serde(rename = "createdAt")]
     pub created_at: Option<String>,
 }

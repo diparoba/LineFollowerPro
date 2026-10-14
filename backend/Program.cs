@@ -273,7 +273,8 @@ app.MapPost("/api/pid", (RobotProfile profile, SerialService serial) =>
         profile.MaxSpeed,
         profile.BrakeSpeed,
         profile.ForkMode,
-        profile.LineColor
+        profile.LineColor,
+        profile.ReflectiveMode
     );
     return Results.Ok(new { success = ok });
 });
